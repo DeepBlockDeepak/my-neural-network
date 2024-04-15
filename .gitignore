@@ -1,0 +1,20 @@
+# Compiled Python files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Python virtual environments
+venv/
+*.venv
+env/
+
+# Development tools settings
+.idea/
+.vscode/
+
+# OS generated files
+.DS_Store
