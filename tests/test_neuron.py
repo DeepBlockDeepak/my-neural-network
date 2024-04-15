@@ -1,5 +1,4 @@
 import numpy as np
-import pytest
 
 from src.my_neural_network.neuron import SimpleNeuralNetwork
 
@@ -17,6 +16,6 @@ def test_compute_loss():
     loss = net.compute_loss(y_pred, y_true)
 
     # Assert
-    assert np.isclose(loss, expected_loss), f"The computed loss is incorrect: {loss:.2f} vs {expected_loss:.2f}"
-
-
+    assert np.isclose(
+        loss, expected_loss
+    ), f"The computed loss is incorrect: {loss:.2f} vs {expected_loss:.2f}"

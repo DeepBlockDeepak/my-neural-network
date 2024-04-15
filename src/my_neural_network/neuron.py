@@ -63,4 +63,4 @@ layer_dims = [
 net = SimpleNeuralNetwork(np.array([5, 4, 3, 2]))
 
 
-print(net.parameters.keys())
+# print(net.parameters.keys())
