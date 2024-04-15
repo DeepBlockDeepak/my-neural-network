@@ -24,18 +24,21 @@ isort = "^5.10.1"
 black = "^22.3.0"
 ruff = "^0.1.13"
 
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.1.1"
+
 [tool.isort]
 profile = "black"
 
 [tool.poetry.scripts]
 # Formats the code using isort and black
-format = "my_neural_network.dev_tools.format_code:run"
+format = "scripts.format_code:run"
 # Lints the code using ruff
-lint = "my_neural_network.dev_tools.lint_code:run"
+lint = "scripts.lint_code:run"
 # Runs unit tests located in the tests/ directory
-test = "my_neural_network.dev_tools.run_tests:run"
+test = "scripts.run_tests:run"
 # command to run format, lint, and test sequentially
-all-checks = "my_neural_network.dev_tools.all_checks:run_all"
+all-checks = "scripts.all_checks:run_all"
 
 [build-system]
 requires = ["poetry-core"]
