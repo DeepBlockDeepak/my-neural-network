@@ -19,7 +19,7 @@ jobs:
     - name: Cache Poetry virtual environment
       # Caching dependencies in GitHub Actions workflows to reduce the time to run CI processes 
       # by storing parts of project environment (like dependencies) and reusing them in future runs, 
-      # rather than reinstalling them every time. 
+      # rather than re-installing them every time. 
       uses: actions/cache@v2
       with:
         path: ~/.cache/pypoetry/virtualenvs
