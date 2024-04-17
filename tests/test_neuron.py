@@ -1,7 +1,29 @@
 import numpy as np
 import pytest
 
-from src.my_neural_network.neuron import SimpleNeuralNetwork
+from activation_functions import ActivationFunction
+from my_neural_network import SimpleNeuralNetwork
+
+
+def test_neuron_imports():
+    """
+    Creates a list of the expected methods and checks that each one
+    is present in the SimpleNeuralNetwork class.
+    If any are missing, it fails the assertion and reports which attributes are not found
+    """
+    expected_attributes = [
+        "forward_propagation",
+        "compute_loss",
+        "backward_propagation",
+        "update_parameters",
+        "train",
+    ]
+
+    missing_attributes = [
+        attr for attr in expected_attributes if not hasattr(SimpleNeuralNetwork, attr)
+    ]
+
+    assert not missing_attributes, f"Neuron is missing attributes: {missing_attributes}"
 
 
 @pytest.fixture(
@@ -47,27 +69,25 @@ def test_forward_propagation(create_network):
     assert len(caches) == network.L - 1, "Cache not correctly formed."
 
 
-def test_sigmoid(create_network):
-    network = create_network
+def test_sigmoid():
     Z = np.array([0, 2, -2])
-    A = network.sigmoid(Z)
+    A = ActivationFunction.sigmoid(Z)
     assert np.allclose(
         A, [0.5, 0.88079708, 0.11920292]
     ), "Sigmoid function is incorrect."
 
 
-def test_softmax(create_network):
-    network = create_network
+def test_softmax():
     Z = np.array([[0, 1], [2, 1]])
-    A = network.softmax(Z)
+    A = ActivationFunction.softmax(Z)
     expected_output = np.array([[0.11920292, 0.5], [0.88079708, 0.5]])
     assert np.allclose(A, expected_output), "Softmax function is incorrect."
 
 
 def test_backward_propagation(create_network):
     """
-    Checks that all expected gradients are present in the returned gradients dictionary. 
-    This ensures that the backward propagation logic is functioning correctly 
+    Checks that all expected gradients are present in the returned gradients dictionary.
+    This ensures that the backward propagation logic is functioning correctly
     and that it is providing all necessary information for parameter updates.
     """
     network = create_network
@@ -78,15 +98,17 @@ def test_backward_propagation(create_network):
 
     # Prepare labels Y based on number of output classes
     if num_classes == 1:
-        Y = np.random.randint(0, 2, (1, 10))  # single row of Binary labels with vals of [0,1]
-    else: # num_classes is the number of different classes the network can classify.
+        Y = np.random.randint(
+            0, 2, (1, 10)
+        )  # single row of Binary labels with vals of [0,1]
+    else:  # num_classes is the number of different classes the network can classify.
         # Generate random labels for multi-class, and convert to one-hot
         labels = np.random.randint(0, num_classes, (10,))  # Generate random labels
         Y = np.zeros((num_classes, 10))
         Y[labels, np.arange(10)] = 1  # Proper one-hot encoding
-        # Together, `labels` and `np.arange(10)` form a set of index pairs 
-        # that specify which elements of the array Y to set to 1. 
-        # For each column  j (ranging from 0 to 9), the element at row labels[j] 
+        # Together, `labels` and `np.arange(10)` form a set of index pairs
+        # that specify which elements of the array Y to set to 1.
+        # For each column  j (ranging from 0 to 9), the element at row labels[j]
         # is set to 1. This places a 1 in the position corresponding to the class label for each sample.
 
     AL, caches = network.forward_propagation(X)

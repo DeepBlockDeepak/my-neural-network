@@ -1,5 +1,7 @@
 import numpy as np
 
+from activation_functions import ActivationFunction
+
 
 class SimpleNeuralNetwork:
     def __init__(self, layer_dims):
@@ -14,45 +16,6 @@ class SimpleNeuralNetwork:
                 np.random.randn(layer_dims[l], layer_dims[l - 1]) * 0.01
             )
             self.parameters["b" + str(l)] = np.zeros((layer_dims[l], 1))
-
-    def sigmoid(self, Z: np.ndarray) -> np.ndarray:
-        """
-        Apply the sigmoid activation function to each element in the input array.
-
-        The sigmoid function is defined as 1 / (1 + e^(-Z)), which maps any real
-        valued number into the range (0, 1); useful for binary classification.
-
-        Args:
-            Z (np.ndarray): The input array containing the linear combination of weights
-                            and biases at a given layer.
-
-        Returns:
-            np.ndarray: The result of applying the sigmoid function to each element of the input array.
-        """
-        return 1 / (1 + np.exp(-Z))
-
-    def softmax(self, Z: np.ndarray) -> np.ndarray:
-        """
-        Apply the softmax function to each set of scores in the input array.
-
-        Softmax is used to normalize the input array into a probability distribution
-        consisting of K probabilities proportional to the exponentials of the input numbers.
-        Used as the activation function for the final layer of a multi-class classification nn.
-
-        Args:
-            Z (np.ndarray): The input array containing the linear combination of weights
-                            and biases of the output layer.
-
-        Returns:
-            np.ndarray: The probabilities of each class after applying softmax
-                        to the input array.
-        """
-        expZ = np.exp(
-            Z - np.max(Z)
-        )  # Stability improvement: shift values for numerical stability
-        return expZ / expZ.sum(
-            axis=0, keepdims=True
-        )  # Normalize exponentials for probability distribution
 
     def compute_loss(self, AL: np.ndarray, Y: np.ndarray) -> float:
         """
@@ -111,7 +74,7 @@ class SimpleNeuralNetwork:
             W = self.parameters["W" + str(l)]
             b = self.parameters["b" + str(l)]
             Z = np.dot(W, A_prev) + b
-            A = np.maximum(0, Z)  # ReLU activation
+            A = ActivationFunction.relu(Z)  # ReLU activation
             caches.append((A_prev, W, b, Z))
 
         # final activation/output layer
@@ -120,40 +83,17 @@ class SimpleNeuralNetwork:
         Z = np.dot(W, A) + b
 
         if self.layer_dims[-1] == 1:
-            AL = self.sigmoid(
+            AL = ActivationFunction.sigmoid(
                 Z
             )  # Binary classification (single neuron in output layer)
         else:
-            AL = self.softmax(Z)  # Multi-class classification (more than one neuron)
+            AL = ActivationFunction.softmax(
+                Z
+            )  # Multi-class classification (more than one neuron)
 
         caches.append((A, W, b, Z))
 
         return AL, caches
-
-    def relu_derivative(self, Z: np.ndarray) -> np.ndarray:
-        """
-        Compute the derivative of the ReLU activation function.
-
-        Args:
-            Z (np.ndarray): The linear component of the activation function.
-
-        Returns:
-            np.ndarray: Derivative of ReLU, 1 for elements of Z > 0; otherwise, 0.
-        """
-        return (Z > 0).astype(int)
-
-    def sigmoid_derivative(self, Z: np.ndarray) -> np.ndarray:
-        """
-        Compute the derivative of the sigmoid function with respect to the input Z.
-
-        Args:
-            Z (np.ndarray): The linear component of the sigmoid function.
-
-        Returns:
-            np.ndarray: Derivative of the sigmoid function.
-        """
-        sig = self.sigmoid(Z)
-        return sig * (1 - sig)
 
     def compute_initial_gradient(self, AL, Y):
         """
@@ -181,7 +121,7 @@ class SimpleNeuralNetwork:
         Args:
             AL (np.ndarray): Probability vector, output of the forward propagation (forward_propagation()).
             Y (np.ndarray): True "label" vector (for example: containing 0 if non-cat, 1 if cat).
-            caches (list): List of caches containing every cache of linear_activation_forward()
+            caches (list): List of caches containing every cache of forward_propagation()
                            with "relu" (it's caches[l], for l in range(L-1) i.e., l = 0...L-2).
 
         Returns:
@@ -205,9 +145,9 @@ class SimpleNeuralNetwork:
 
             # Lth layer (SIGMOID -> LINEAR) gradients.
             if l == L - 1:
-                dZ = dAL * self.sigmoid_derivative(Z)
+                dZ = dAL * ActivationFunction.sigmoid_derivative(Z)
             else:  # lth layer: (RELU -> LINEAR) gradients.
-                dZ = dAL * self.relu_derivative(Z)
+                dZ = dAL * ActivationFunction.relu_derivative(Z)
 
             dW = np.dot(dZ, A_prev.T) / m
             db = np.sum(dZ, axis=1, keepdims=True) / m
