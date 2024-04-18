@@ -1,4 +1,4 @@
-# My Neural Network Project
+# Simple Neural Network Project
 
 A simple, hand-rolled neural network project for testing and exploration.
 
@@ -29,6 +29,7 @@ poetry run test
 
 ### Formatting and Linting
 This project uses `isort` and `black` for formatting and `ruff` for linting. You can format and lint the code using the provided custom Poetry scripts:
+
 To Format:
 ```bash
 poetry run format
@@ -47,7 +48,3 @@ poetry run all-checks
 Continuous Integration is set up with GitHub Actions, which will format, lint, and run tests on the codebase when pushed to the repository.
 
 See [ci.yml](./.github/workflows/ci.yml) for details.
-
-
-
-
