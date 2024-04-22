@@ -17,6 +17,7 @@ class ActivationFunction:
         Returns:
             np.ndarray: The result of applying the sigmoid function to each element of the input array.
         """
+        Z = np.clip(Z, -500, 500)  # Clipping Z to manage large values
         return 1 / (1 + np.exp(-Z))
 
     @staticmethod
