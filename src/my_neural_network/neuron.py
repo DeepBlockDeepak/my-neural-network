@@ -82,6 +82,8 @@ class SimpleNeuralNetwork:
         b = self.parameters["b" + str(L)]
         Z = np.dot(W, A) + b
 
+        print("Z shape:", Z.shape, "Z type:", type(Z))  # Debugging output
+
         if self.layer_dims[-1] == 1:
             AL = ActivationFunction.sigmoid(
                 Z
@@ -254,4 +256,4 @@ if __name__ == "__main__":
     )  # 100 labels with features equal to size of output layer
 
     # Train the network
-    net.train(X_sample, Y_sample, iterations=1000, learning_rate=0.0075)
+    net.train(X_sample, Y_sample, iterations=10, learning_rate=0.0075)
