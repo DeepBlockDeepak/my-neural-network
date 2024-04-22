@@ -82,6 +82,10 @@ class SimpleNeuralNetwork:
         b = self.parameters["b" + str(L)]
         Z = np.dot(W, A) + b
 
+        print("Z max:", np.max(Z), "Z min:", np.min(Z))
+        if np.isnan(Z).any() or np.isinf(Z).any():
+            print("NaN or Inf detected in Z")
+
         if self.layer_dims[-1] == 1:
             AL = ActivationFunction.sigmoid(
                 Z
