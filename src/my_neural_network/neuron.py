@@ -82,8 +82,6 @@ class SimpleNeuralNetwork:
         b = self.parameters["b" + str(L)]
         Z = np.dot(W, A) + b
 
-        print("Z shape:", Z.shape, "Z type:", type(Z))  # Debugging output
-
         if self.layer_dims[-1] == 1:
             AL = ActivationFunction.sigmoid(
                 Z
