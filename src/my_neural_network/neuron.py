@@ -216,6 +216,29 @@ class SimpleNeuralNetwork:
             if i % 100 == 0:  # Print the cost every 100 iterations
                 print(f"Cost after iteration {i}: {cost}")
 
+    def predict(self, X: np.ndarray) -> np.ndarray:
+        """
+        Predict the outputs for given input data using the trained neural network.
+
+        Args:
+            X (np.ndarray): Input data (features) where each column represents an example.
+
+        Returns:
+            np.ndarray: Predicted labels or values for the input data.
+        """
+        # Perform forward propagation to get the output activations
+        AL, _ = self.forward_propagation(X)
+
+        # check for output layer/ model classification-type
+        if self.layer_dims[-1] == 1:
+            # For binary classification, you might use 0.5 as a threshold
+            predictions = (AL > 0.5).astype(int)
+        else:
+            # For multiclass classification, return the index of the max probability
+            predictions = np.argmax(AL, axis=0)
+
+        return predictions
+
 
 if __name__ == "__main__":
     # Define the architecture
