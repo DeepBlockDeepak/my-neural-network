@@ -18,7 +18,9 @@ class ActivationFunction:
             np.ndarray: The result of applying the sigmoid function to each element of the input array.
         """
         Z = np.clip(Z, -500, 500)  # Clipping Z to manage large values
-        return 1 / (1 + np.exp(-Z))
+        result = 1 / (1 + np.exp(-Z))
+        result = np.where(np.isnan(result), 0.0, result)  # Replace NaN results with 0
+        return result
 
     @staticmethod
     def softmax(Z: np.ndarray) -> np.ndarray:
@@ -55,7 +57,12 @@ class ActivationFunction:
         Returns:
             np.ndarray: Activation Layer
         """
-        return np.maximum(0, Z)
+        Z = np.where(
+            np.isinf(Z), np.finfo(np.float64).max, Z
+        )  # Replace inf with the maximum float
+        result = np.maximum(0, Z)
+        result = np.where(np.isnan(result), 0.0, result)  # Replace NaN results with 0
+        return result
 
     @staticmethod
     def sigmoid_derivative(Z: np.ndarray) -> np.ndarray:
