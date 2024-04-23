@@ -116,3 +116,43 @@ def test_backward_propagation(create_network):
     assert all(
         f"dW{l}" in grads and f"db{l}" in grads for l in range(1, network.L)
     ), "Gradient keys missing."
+
+
+@pytest.fixture
+def input_data():
+    # Creates test data and labels with a specified dtype
+    X = np.random.randn(40, 100).astype(np.float64)  # 40 features, 100 samples
+    y = np.random.randint(0, 2, (1, 100)).astype(np.float64)  # Binary labels
+    return X, y
+
+
+@pytest.mark.parametrize("dtype", [np.float64, np.float32, float, np.int64, np.int32])
+def test_data_types(input_data, dtype):
+    X, y = input_data
+    X = X.astype(dtype)
+    y = y.astype(dtype)
+    nn = SimpleNeuralNetwork([X.shape[0], 10, 1])
+    try:
+        nn.train(X, y, iterations=10, learning_rate=0.01)
+    except Exception as e:
+        pytest.fail(f"Training failed with dtype {dtype}: {str(e)}")
+
+
+@pytest.mark.parametrize(
+    "shape",
+    [
+        ((40, 100), (1, 100)),  # correct shape
+        ((40, 101), (1, 100)),  # mismatched shapes
+        ((39, 100), (1, 100)),  # incorrect feature size
+    ],
+)
+def test_input_shapes(shape):
+    feature_shape, label_shape = shape
+    X = np.random.randn(*feature_shape).astype(np.float64)
+    y = np.random.randint(0, 2, label_shape).astype(np.float64)
+    nn = SimpleNeuralNetwork([X.shape[0], 10, 1])
+    if feature_shape[0] != nn.layer_dims[0] or feature_shape[1] != label_shape[1]:
+        with pytest.raises(ValueError):
+            nn.train(X, y, iterations=10, learning_rate=0.01)
+    else:
+        nn.train(X, y, iterations=10, learning_rate=0.01)  # Should pass without errors

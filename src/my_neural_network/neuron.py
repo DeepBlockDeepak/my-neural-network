@@ -82,7 +82,6 @@ class SimpleNeuralNetwork:
         b = self.parameters["b" + str(L)]
         Z = np.dot(W, A) + b
 
-        print("Z max:", np.max(Z), "Z min:", np.min(Z))
         if np.isnan(Z).any() or np.isinf(Z).any():
             print("NaN or Inf detected in Z")
 
@@ -209,7 +208,7 @@ class SimpleNeuralNetwork:
             AL, caches = self.forward_propagation(X)
 
             # Compute cost
-            cost = self.compute_loss(AL, Y)
+            # cost = self.compute_loss(AL, Y)
 
             # Backward propagation
             grads = self.backward_propagation(AL, Y, caches)
@@ -217,8 +216,8 @@ class SimpleNeuralNetwork:
             # Update parameters
             self.update_parameters(grads, learning_rate)
 
-            if i % 100 == 0:  # Print the cost every 100 iterations
-                print(f"Cost after iteration {i}: {cost}")
+            # if i % 100 == 0:  # Print the cost every 100 iterations
+            #     print(f"Cost after iteration {i}: {cost}")
 
     def predict(self, X: np.ndarray) -> np.ndarray:
         """
@@ -242,20 +241,3 @@ class SimpleNeuralNetwork:
             predictions = np.argmax(AL, axis=0)
 
         return predictions
-
-
-if __name__ == "__main__":
-    # Define the architecture
-    layer_dims = [5, 4, 3, 2]  # Example architecture
-    net = SimpleNeuralNetwork(layer_dims)
-
-    # Create some sample data
-    X_sample = np.random.rand(
-        layer_dims[0], 100
-    )  # 100 examples with features equal to size of input layer
-    Y_sample = np.random.rand(
-        layer_dims[-1], 100
-    )  # 100 labels with features equal to size of output layer
-
-    # Train the network
-    net.train(X_sample, Y_sample, iterations=10, learning_rate=0.0075)
