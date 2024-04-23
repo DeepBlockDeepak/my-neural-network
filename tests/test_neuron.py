@@ -28,7 +28,7 @@ def test_neuron_imports():
 
 @pytest.fixture(
     params=[
-        [5, 10, 1],  # Binary classifier configuration
+        [5, 10, 1],  # Binary classifier configuration (** 1 ** output neuron)
         [5, 10, 3],  # Multi-class classifier configuration
     ]
 )
@@ -39,7 +39,12 @@ def create_network(request):
 
 
 def test_initialization(create_network):
+    """
+    Ensure that weights and biases are initialized correctly.
+    Checks that each layer has the appropriate dimensions and is stored as numpy arrays.
+    """
     network = create_network
+    # Verify that all expected weight and bias matrices exist and are of the correct shape
     assert all(
         key in network.parameters
         for l in range(1, network.L)
@@ -59,6 +64,10 @@ def test_initialization(create_network):
 
 
 def test_forward_propagation(create_network):
+    """
+    Test the forward propagation function to ensure it computes correctly.
+    Checks output dimensions and cache integrity.
+    """
     network = create_network
     X = np.random.randn(5, 10)  # Example input (5 features, 10 samples)
     AL, caches = network.forward_propagation(X)
@@ -70,6 +79,9 @@ def test_forward_propagation(create_network):
 
 
 def test_sigmoid():
+    """
+    Tests the sigmoid activation function.
+    """
     Z = np.array([0, 2, -2])
     A = ActivationFunction.sigmoid(Z)
     assert np.allclose(
@@ -78,6 +90,9 @@ def test_sigmoid():
 
 
 def test_softmax():
+    """
+    Tests the softmax activation function
+    """
     Z = np.array([[0, 1], [2, 1]])
     A = ActivationFunction.softmax(Z)
     expected_output = np.array([[0.11920292, 0.5], [0.88079708, 0.5]])
