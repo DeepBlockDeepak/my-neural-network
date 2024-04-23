@@ -6,6 +6,10 @@ authors = ["DeepBlockDeepak <jordan.medina1729@gmail.com>"]
 license = "MIT"
 readme = "README.md"
 
+packages = [
+    { include = "activation_functions", from = "src" },
+    { include = "my_neural_network", from = "src" }
+]
 
 # Define your Python version and any project dependencies here
 [tool.poetry.dependencies]
