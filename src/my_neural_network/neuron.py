@@ -42,7 +42,7 @@ class SimpleNeuralNetwork:
             cost = -np.sum(Y * np.log(AL + 1e-8)) / m
         return np.squeeze(cost)  # Reduce the dimensionality of the cost to a scalar
 
-    def forward_propagation(self, X: np.ndarray) -> tuple:
+    def forward_propagation(self, X: np.ndarray) -> tuple[np.ndarray, list]:
         """
         Performs the forward pass through the network for binary or multiclass classification.
         Computes the activation at each layer by applying the linear transformation followed by the activation function.
