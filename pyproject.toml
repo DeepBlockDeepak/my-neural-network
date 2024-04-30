@@ -23,6 +23,7 @@ pyarrow = "^15.0.0"
 torch = "^2"
 
 # Development dependencies for formatting and linting
+pydantic = "^2.7.1"
 [tool.poetry.dev-dependencies]
 isort = "^5.10.1"
 black = "^22.3.0"
