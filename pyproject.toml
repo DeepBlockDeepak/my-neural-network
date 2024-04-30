@@ -51,6 +51,8 @@ format = "scripts.format_code:run"
 lint = "scripts.lint_code:run"
 # Runs unit tests located in the tests/ directory
 test = "scripts.run_tests:run"
+# for coverage-enabled testing
+coverage = "scripts.coverage_test:run"
 # command to run format, lint, and test sequentially
 all-checks = "scripts.all_checks:run_all"
 
