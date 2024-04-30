@@ -1,1 +1,1 @@
-from .neuron import SimpleNeuralNetwork
+from .neuron import NeuralNetworkConfig, SimpleNeuralNetwork
