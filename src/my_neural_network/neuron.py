@@ -98,7 +98,7 @@ class SimpleNeuralNetwork:
 
         return AL, caches
 
-    def compute_initial_gradient(self, AL, Y):
+    def compute_initial_gradient(self, AL, Y) -> np.ndarray:
         """
         Differentiate between binary cross-entropy and multi-class cross-entropy.
 
