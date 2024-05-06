@@ -12,6 +12,7 @@ def run():
             "--cov=my_neural_network",
             "--cov-report=term",
             "--cov-report=html:coverage_html",
+            "--cov-fail-under=80",
         ],
         check=True,
     )
