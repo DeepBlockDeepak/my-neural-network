@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 from activation_functions import ActivationFunction
-from my_neural_network import SimpleNeuralNetwork
+from my_neural_network import NeuralNetworkConfig, SimpleNeuralNetwork
 
 
 def test_neuron_imports():
@@ -34,7 +34,9 @@ def test_neuron_imports():
 )
 def create_network(request):
     layer_dims = request.param
-    network = SimpleNeuralNetwork(layer_dims)
+    # config instance for the instanced network
+    config = NeuralNetworkConfig(layer_dims=layer_dims)
+    network = SimpleNeuralNetwork(config=config)
     return network
 
 
@@ -146,9 +148,11 @@ def test_data_types(input_data, dtype):
     X, y = input_data
     X = X.astype(dtype)
     y = y.astype(dtype)
-    nn = SimpleNeuralNetwork([X.shape[0], 10, 1])
+    # Set up the network configuration using the new config class
+    config = NeuralNetworkConfig(layer_dims=[X.shape[0], 10, 1])
+    nn = SimpleNeuralNetwork(config=config)
     try:
-        nn.train(X, y, iterations=10, learning_rate=0.01)
+        nn.train(X, y, iterations=10)
     except Exception as e:
         pytest.fail(f"Training failed with dtype {dtype}: {str(e)}")
 
@@ -165,9 +169,11 @@ def test_input_shapes(shape):
     feature_shape, label_shape = shape
     X = np.random.randn(*feature_shape).astype(np.float64)
     y = np.random.randint(0, 2, label_shape).astype(np.float64)
-    nn = SimpleNeuralNetwork([X.shape[0], 10, 1])
+    # Use the config model to define the network
+    config = NeuralNetworkConfig(layer_dims=[X.shape[0], 10, 1])
+    nn = SimpleNeuralNetwork(config=config)
     if feature_shape[0] != nn.layer_dims[0] or feature_shape[1] != label_shape[1]:
         with pytest.raises(ValueError):
-            nn.train(X, y, iterations=10, learning_rate=0.01)
+            nn.train(X, y, iterations=10)
     else:
-        nn.train(X, y, iterations=10, learning_rate=0.01)  # Should pass without errors
+        nn.train(X, y, iterations=10)  # Should pass without errors
