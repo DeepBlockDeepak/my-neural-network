@@ -24,7 +24,6 @@ torch = "^2"
 pydantic = "^2.7.1"
 
 # Development dependencies for formatting and linting
-pydantic = "^2.7.1"
 [tool.poetry.dev-dependencies]
 isort = "^5.10.1"
 black = "^24.3.0"
