@@ -8,14 +8,17 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+
     - name: Set up Python 3.11
       uses: actions/setup-python@v2
       with:
         python-version: '3.11'
+    
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install poetry
+
     - name: Cache Poetry virtual environment
       # Caching dependencies in GitHub Actions workflows to reduce the time to run CI processes 
       # by storing parts of project environment (like dependencies) and reusing them in future runs, 
@@ -26,12 +29,19 @@ jobs:
         key: ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
         restore-keys: |
           ${{ runner.os }}-poetry-
+
     - name: Install project dependencies
       run: poetry install
+
     - name: Format code # This custom commands 'format','lint' and 'test' are defined in pyproject.toml under [tool.poetry.scripts]
       run: poetry run format
       continue-on-error: true # To continue the workflow even if formatting issues are found
+
     - name: Lint code
       run: poetry run lint
+
     - name: Run unit tests
       run: poetry run test
+
+    - name: Run coverage tests
+      run: poetry run coverage

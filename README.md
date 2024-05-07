@@ -27,6 +27,13 @@ This project uses `pytest` for running unit tests. To run the unit tests, use:
 poetry run test
 ```
 
+### Generating Coverage Reports
+To generate and view a coverage report, run:
+```bash
+poetry run coverage
+```
+This will generate a coverage report and save it as an HTML file in a directory called `coverage_html`. 
+
 ### Formatting and Linting
 This project uses `isort` and `black` for formatting and `ruff` for linting. You can format and lint the code using the provided custom Poetry scripts:
 
@@ -39,7 +46,7 @@ To Lint:
 poetry run lint
 ```
 
-To perform formatting, linting, and testing sequentially, you can run:
+To perform formatting, linting, and unit-testing sequentially, you can run:
 ```bash
 poetry run all-checks
 ```

@@ -12,6 +12,15 @@ venv/
 *.venv
 env/
 
+# Python artifact directories
+build/
+dist/
+*.egg-info/
+
+# Coverage reports
+.coverage
+coverage_html/
+
 # Development tools settings
 .idea/
 .vscode/
