@@ -1,21 +1,31 @@
 import numpy as np
+from pydantic import BaseModel
 
 from activation_functions import ActivationFunction
 
 
+class NeuralNetworkConfig(BaseModel):
+    layer_dims: list[int]
+    learning_rate: float = 0.01
+    seed: int = 1
+
+
 class SimpleNeuralNetwork:
-    def __init__(self, layer_dims):
+    def __init__(self, config: NeuralNetworkConfig):
+        self.config = config
         self.parameters = {}
-        self.L = len(layer_dims)  # number of layers in the network
-        self.layer_dims = layer_dims
+        self.L = len(config.layer_dims)  # number of layers in the network
+        self.layer_dims = config.layer_dims
 
         # Initialize parameters
-        np.random.seed(1)  # Seed the random number generator for consistency
+        np.random.seed(
+            self.config.seed
+        )  # Seed the random number generator for consistency
         for l in range(1, self.L):
             self.parameters["W" + str(l)] = (
-                np.random.randn(layer_dims[l], layer_dims[l - 1]) * 0.01
+                np.random.randn(self.layer_dims[l], self.layer_dims[l - 1]) * 0.01
             )
-            self.parameters["b" + str(l)] = np.zeros((layer_dims[l], 1))
+            self.parameters["b" + str(l)] = np.zeros((self.layer_dims[l], 1))
 
     def compute_loss(self, AL: np.ndarray, Y: np.ndarray) -> float:
         """
@@ -165,7 +175,7 @@ class SimpleNeuralNetwork:
 
         return grads
 
-    def update_parameters(self, grads: dict, learning_rate: float) -> None:
+    def update_parameters(self, grads: dict) -> None:
         """
         Update the parameters using gradient descent.
 
@@ -176,10 +186,14 @@ class SimpleNeuralNetwork:
         L = self.L
 
         for l in range(1, L):
-            self.parameters["W" + str(l)] -= learning_rate * grads["dW" + str(l)]
-            self.parameters["b" + str(l)] -= learning_rate * grads["db" + str(l)]
+            self.parameters["W" + str(l)] -= (
+                self.config.learning_rate * grads["dW" + str(l)]
+            )
+            self.parameters["b" + str(l)] -= (
+                self.config.learning_rate * grads["db" + str(l)]
+            )
 
-    def train(self, X, Y, iterations, learning_rate) -> None:
+    def train(self, X, Y, iterations) -> None:
         """
         This method trains the neural network using gradient descent optimization.
         It iteratively performs forward propagation, computes the loss, backward propagation, and updates the parameters of the network.
@@ -188,7 +202,6 @@ class SimpleNeuralNetwork:
             X (np.ndarray): Input data matrix where each column represents a training example.
             Y (np.ndarray): True label matrix where each column represents the true labels for the corresponding training example in X.
             iterations (int): Number of iterations for training.
-            learning_rate (float): Learning rate for gradient descent.
 
         Returns:
             None
@@ -214,7 +227,7 @@ class SimpleNeuralNetwork:
             grads = self.backward_propagation(AL, Y, caches)
 
             # Update parameters
-            self.update_parameters(grads, learning_rate)
+            self.update_parameters(grads)
 
             # if i % 100 == 0:  # Print the cost every 100 iterations
             #     print(f"Cost after iteration {i}: {cost}")
