@@ -26,18 +26,6 @@ def test_neuron_imports():
     assert not missing_attributes, f"Neuron is missing attributes: {missing_attributes}"
 
 
-@pytest.fixture(
-    params=[
-        [5, 10, 1],  # Binary classifier configuration (** 1 ** output neuron)
-        [5, 10, 3],  # Multi-class classifier configuration
-    ]
-)
-def create_network(request):
-    layer_dims = request.param
-    network = SimpleNeuralNetwork(layer_dims)
-    return network
-
-
 def test_initialization(create_network):
     """
     Ensure that weights and biases are initialized correctly.
@@ -131,14 +119,6 @@ def test_backward_propagation(create_network):
     assert all(
         f"dW{l}" in grads and f"db{l}" in grads for l in range(1, network.L)
     ), "Gradient keys missing."
-
-
-@pytest.fixture
-def input_data():
-    # Creates test data and labels with a specified dtype
-    X = np.random.randn(40, 100).astype(np.float64)  # 40 features, 100 samples
-    y = np.random.randint(0, 2, (1, 100)).astype(np.float64)  # Binary labels
-    return X, y
 
 
 @pytest.mark.parametrize("dtype", [np.float64, np.float32, float, np.int64, np.int32])
