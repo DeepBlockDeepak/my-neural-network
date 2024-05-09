@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from my_neural_network import SimpleNeuralNetwork
+from my_neural_network import NeuralNetworkConfig, SimpleNeuralNetwork
 
 
 @pytest.fixture
@@ -20,5 +20,7 @@ def input_data():
 )
 def create_network(request):
     layer_dims = request.param
-    network = SimpleNeuralNetwork(layer_dims)
+    # config instance for the instanced network
+    config = NeuralNetworkConfig(layer_dims=layer_dims)
+    network = SimpleNeuralNetwork(config=config)
     return network
