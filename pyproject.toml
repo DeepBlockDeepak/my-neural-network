@@ -22,6 +22,7 @@ kaggle = "^1.5.16"
 pyarrow = "^15.0.0"
 torch = "^2"
 pydantic = "^2.7.1"
+numpy = "^1.24.0"
 
 # Development dependencies for formatting and linting
 [tool.poetry.dev-dependencies]
@@ -57,5 +58,5 @@ coverage = "scripts.coverage_test:run"
 all-checks = "scripts.all_checks:run_all"
 
 [build-system]
-requires = ["poetry-core"]
+requires = ["poetry-core>=1.6"]
 build-backend = "poetry.core.masonry.api"
