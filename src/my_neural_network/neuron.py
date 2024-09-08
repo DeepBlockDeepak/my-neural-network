@@ -61,13 +61,13 @@ class SimpleNeuralNetwork:
         Applies sigmoid or softmax activation at the final layer to output a probability for the binary class or multi-class, respectively.
 
         Args:
-            X (np.ndarray): Input data (features) where each column represents an example.
+            X: Input data (features) where each column represents an example.
 
         Returns:
             tuple: A tuple containing:
-                - AL (np.ndarray): The sigmoid or softmax probability of the output layer, which is the
+                - AL: The sigmoid or softmax probability of the output layer, which is the
                                 predicted probability for the positive class for each example.
-                - caches (list): A list of tuples, where each tuple contains:
+                - caches: A list of tuples, where each tuple contains:
                                 (A_prev, W, b, Z) for each layer. These are cached for
                                 use in the backward pass:
                                 - A_prev: activations from the previous layer
@@ -108,16 +108,16 @@ class SimpleNeuralNetwork:
 
         return AL, caches
 
-    def compute_initial_gradient(self, AL, Y) -> np.ndarray:
+    def compute_initial_gradient(self, AL: np.ndarray, Y: np.ndarray) -> np.ndarray:
         """
         Differentiate between binary cross-entropy and multi-class cross-entropy.
 
         Args:
-            AL (np.ndarray): Probability vector, output of the forward propagation (forward_propagation()).
-            Y (np.ndarray): True "label" vector (for example: containing 0 if non-cat, 1 if cat).
+            AL: Probability vector, output of the forward propagation (forward_propagation()).
+            Y: True "label" vector (for example: containing 0 if non-cat, 1 if cat).
 
         Returns:
-            dAL (np.ndarray): Initial gradient of the loss with respect to the activation layer.
+            dAL: Initial gradient of the loss with respect to the activation layer.
         """
         if (
             AL.shape[0] == 1
@@ -132,13 +132,13 @@ class SimpleNeuralNetwork:
         with respect to the weights and biases.
 
         Args:
-            AL (np.ndarray): Probability vector, output of the forward propagation (forward_propagation()).
-            Y (np.ndarray): True "label" vector (for example: containing 0 if non-cat, 1 if cat).
-            caches (list): List of caches containing every cache of forward_propagation()
+            AL: Probability vector, output of the forward propagation (forward_propagation()).
+            Y: True "label" vector (for example: containing 0 if non-cat, 1 if cat).
+            caches: List of caches containing every cache of forward_propagation()
                            with "relu" (it's caches[l], for l in range(L-1) i.e., l = 0...L-2).
 
         Returns:
-            grads (dict): A dictionary with the gradients.
+            grads: A dictionary with the gradients.
                          grads["dA" + str(l)] = ...
                          grads["dW" + str(l)] = ...
                          grads["db" + str(l)] = ...
@@ -180,8 +180,8 @@ class SimpleNeuralNetwork:
         Update the parameters using gradient descent.
 
         Args:
-            grads (dict): Dictionary with gradients.
-            learning_rate (float): Learning rate of the gradient descent update rule.
+            grads: Dictionary with gradients.
+            learning_rate: Learning rate of the gradient descent update rule.
         """
         L = self.L
 
@@ -193,18 +193,15 @@ class SimpleNeuralNetwork:
                 self.config.learning_rate * grads["db" + str(l)]
             )
 
-    def train(self, X, Y, iterations) -> None:
+    def train(self, X: np.ndarray, Y: np.ndarray, iterations: int) -> None:
         """
         This method trains the neural network using gradient descent optimization.
         It iteratively performs forward propagation, computes the loss, backward propagation, and updates the parameters of the network.
 
         Args:
-            X (np.ndarray): Input data matrix where each column represents a training example.
-            Y (np.ndarray): True label matrix where each column represents the true labels for the corresponding training example in X.
-            iterations (int): Number of iterations for training.
-
-        Returns:
-            None
+            X: Input data matrix where each column represents a training example.
+            Y: True label matrix where each column represents the true labels for the corresponding training example in X.
+            iterations: Number of training iterations.
 
         Notes:
             During each iteration:
@@ -237,10 +234,10 @@ class SimpleNeuralNetwork:
         Predict the outputs for given input data using the trained neural network.
 
         Args:
-            X (np.ndarray): Input data (features) where each column represents an example.
+            X: Input data (features) where each column represents an example.
 
         Returns:
-            np.ndarray: Predicted labels or values for the input data.
+            Predicted labels or values for the input data.
         """
         # Perform forward propagation to get the output activations
         AL, _ = self.forward_propagation(X)
