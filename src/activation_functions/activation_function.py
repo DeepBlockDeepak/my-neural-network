@@ -11,15 +11,15 @@ class ActivationFunction:
         valued number into the range (0, 1); useful for binary classification.
 
         Args:
-            Z (np.ndarray): The input array containing the linear combination of weights
+            Z: The input array containing the linear combination of weights
                             and biases at a given layer.
 
         Returns:
-            np.ndarray: The result of applying the sigmoid function to each element of the input array.
+            np.ndarray: Sigmoid function applied to each element of the input array.
         """
-        Z = np.clip(Z, -500, 500)  # Clipping Z to manage large values
+        Z = np.clip(Z, -500, 500)  # clip Z to manage large values
         result = 1 / (1 + np.exp(-Z))
-        result = np.where(np.isnan(result), 0.0, result)  # Replace NaN results with 0
+        result = np.where(np.isnan(result), 0.0, result)  # replace NaN results with 0
         return result
 
     @staticmethod
@@ -32,32 +32,30 @@ class ActivationFunction:
         Used as the activation function for the final layer of a multi-class classification nn.
 
         Args:
-            Z (np.ndarray): The input array containing the linear combination of weights
+            Z: The input array containing the linear combination of weights
                             and biases of the output layer.
 
         Returns:
             np.ndarray: The probabilities of each class after applying softmax
                         to the input array.
         """
-        expZ = np.exp(
-            Z - np.max(Z)
-        )  # Stability improvement: shift values for numerical stability
+        expZ = np.exp(Z - np.max(Z))  # shift values for numerical stability
         return expZ / expZ.sum(
             axis=0, keepdims=True
-        )  # Normalize exponentials for probability distribution
+        )  # normalize exponentials for prob distr
 
     @staticmethod
     def relu(Z) -> np.ndarray:
         """
-        Performs ReLU activation
+        Performs ReLU activation for hidden layers.
 
         Args:
-            Z (np.ndarray): The input array containing the linear combination of weights
-                            and biases at a given layer.
+            Z: The input array containing the linear combination of weights
+                    and biases at a given layer.
         Returns:
-            np.ndarray: Activation Layer
+            np.ndarray: Activation layer
         """
-        # Replace inf with the maximum float
+        # replace inf with the maximum float
         # prevents the function from propagating infinite values further into the network
         Z = np.where(np.isinf(Z), np.finfo(np.float64).max, Z)
         result = np.maximum(0, Z)  # ReLU operation
@@ -72,7 +70,7 @@ class ActivationFunction:
         Compute the derivative of the sigmoid function with respect to the input Z.
 
         Args:
-            Z (np.ndarray): The linear component of the sigmoid function.
+            Z: The linear component of the sigmoid function.
 
         Returns:
             np.ndarray: Derivative of the sigmoid function.
@@ -86,7 +84,7 @@ class ActivationFunction:
         Compute the derivative of the ReLU activation function.
 
         Args:
-            Z (np.ndarray): The linear component of the activation function.
+            Z: The linear component of the activation function.
 
         Returns:
             np.ndarray: Derivative of ReLU, 1 for elements of Z > 0; otherwise, 0.
