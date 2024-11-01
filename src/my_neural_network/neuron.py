@@ -1,13 +1,15 @@
 import numpy as np
-from pydantic import BaseModel
 
 from activation_functions import ActivationFunction
 
 
-class NeuralNetworkConfig(BaseModel):
-    layer_dims: list[int]
-    learning_rate: float = 0.01
-    seed: int = 1
+class NeuralNetworkConfig:
+    def __init__(
+        self, layer_dims: list[int], learning_rate: float = 0.01, seed: int = 1
+    ) -> None:
+        self.layer_dims = layer_dims
+        self.learning_rate = learning_rate
+        self.seed = seed
 
 
 class SimpleNeuralNetwork:
@@ -17,10 +19,8 @@ class SimpleNeuralNetwork:
         self.L = len(config.layer_dims)  # number of layers in the network
         self.layer_dims = config.layer_dims
 
-        # Initialize parameters
-        np.random.seed(
-            self.config.seed
-        )  # Seed the random number generator for consistency
+        # initialize parameters
+        np.random.seed(self.config.seed)
         for l in range(1, self.L):
             self.parameters["W" + str(l)] = (
                 np.random.randn(self.layer_dims[l], self.layer_dims[l - 1]) * 0.01
@@ -38,19 +38,19 @@ class SimpleNeuralNetwork:
         It measures the performance of a classification model whose output is a probability value between 0 and 1.
 
         Args:
-            AL (np.ndarray): The activation from the last layer's activation function; the probabilities predicted by the model for the positive class.
-            Y (np.ndarray): The true labels of the data as a binary vector (e.g., containing 0 for negative class and 1 for positive class).
+            AL: The activation from the last layer's activation function; the probabilities predicted by the model for the positive class.
+            Y: The true labels of the data as a binary vector (e.g., containing 0 for negative class and 1 for positive class).
 
         Returns:
             float: The average binary cross-entropy loss across all examples in the dataset.
         """
-        m = Y.shape[1]  # Number of samples
+        m = Y.shape[1]  # number of samples
         if Y.shape[0] == 1:  # Binary cross-entropy
             # 1e-8 is added for numerical stability to avoid log(0)
             cost = -np.sum(Y * np.log(AL + 1e-8) + (1 - Y) * np.log(1 - AL + 1e-8)) / m
-        else:  # Categorical cross-entropy
+        else:  # categorical cross-entropy for multi-class
             cost = -np.sum(Y * np.log(AL + 1e-8)) / m
-        return np.squeeze(cost)  # Reduce the dimensionality of the cost to a scalar
+        return np.squeeze(cost)  # reduce the dimensionality of the cost to a scalar
 
     def forward_propagation(self, X: np.ndarray) -> tuple[np.ndarray, list]:
         """
@@ -65,9 +65,10 @@ class SimpleNeuralNetwork:
 
         Returns:
             tuple: A tuple containing:
-                - AL: The sigmoid or softmax probability of the output layer, which is the
+                - AL: The activation of the output layer:
+                                the sigmoid or softmax probability of the output layer, which is the
                                 predicted probability for the positive class for each example.
-                - caches: A list of tuples, where each tuple contains:
+                - caches: A list of tuples needed for backprop, where each tuple contains:
                                 (A_prev, W, b, Z) for each layer. These are cached for
                                 use in the backward pass:
                                 - A_prev: activations from the previous layer
@@ -75,26 +76,28 @@ class SimpleNeuralNetwork:
                                 - b: bias vector of the current layer
                                 - Z: linear component (W*A_prev + b) of the current layer
         """
-        caches = []
-        A = X
-        L = self.L - 1  # Number of layers excluding the output layer
+        caches = []  # stores (A_prev, W, b, Z) for backprop later
+        A = X  # set activation of the input layer to the input data
 
-        for l in range(1, L):
+        # iterate over all hidden layers, excluding the output layer
+        for l in range(1, self.L - 1):
             A_prev = A
             W = self.parameters["W" + str(l)]
             b = self.parameters["b" + str(l)]
             Z = np.dot(W, A_prev) + b
-            A = ActivationFunction.relu(Z)  # ReLU activation
+            A = ActivationFunction.relu(Z)  # ReLU activation for all hidden layers
             caches.append((A_prev, W, b, Z))
 
-        # final activation/output layer
-        W = self.parameters["W" + str(L)]
-        b = self.parameters["b" + str(L)]
+        # final activation leading to output layer
+        W = self.parameters["W" + str(self.L - 1)]
+        b = self.parameters["b" + str(self.L - 1)]
         Z = np.dot(W, A) + b
 
+        # check numerical stability
         if np.isnan(Z).any() or np.isinf(Z).any():
             print("NaN or Inf detected in Z")
 
+        # activation func for output layer
         if self.layer_dims[-1] == 1:
             AL = ActivationFunction.sigmoid(
                 Z
@@ -104,6 +107,7 @@ class SimpleNeuralNetwork:
                 Z
             )  # Multi-class classification (more than one neuron)
 
+        # A here is the activation from the last hidden layer.
         caches.append((A, W, b, Z))
 
         return AL, caches
@@ -143,35 +147,39 @@ class SimpleNeuralNetwork:
                          grads["dW" + str(l)] = ...
                          grads["db" + str(l)] = ...
         """
-
-        grads = {}
-        L = self.L
+        grads = {}  # cache gradient params to update during gradient descent
+        L = self.L  # total number of layers including the input layer
         m = AL.shape[1]
-        Y = Y.reshape(AL.shape)  # Ensure Y has the same shape as AL
+        Y = Y.reshape(AL.shape)  # ensure Y has the same shape as AL
 
-        dAL = self.compute_initial_gradient(AL, Y)
+        # initialize backpropagation for output layer
+        dZ = AL - Y  # for the output layer (layer L-1); same for binary & multi-class
 
-        # Loop from l=L-1 to l=0
-        for l in range(L - 1, 0, -1):
-            current_cache = caches[l - 1]
+        # retrieve cache for the output layer, layer L-1
+        current_cache = caches[-1]
+        A_prev, W, b, Z = current_cache
+
+        # calc gradients for the output layer
+        grads["dW" + str(L - 1)] = (1 / m) * np.dot(dZ, A_prev.T)
+        grads["db" + str(L - 1)] = (1 / m) * np.sum(dZ, axis=1, keepdims=True)
+
+        # initialize dA_prev for the previous layer
+        dA_prev = np.dot(W.T, dZ)
+
+        # backprop-loop over the hidden layers in reverse order (from L-2 to 1)
+        for l in reversed(range(1, L - 1)):
+            current_cache = caches[l - 1]  # cache for layer l
             A_prev, W, b, Z = current_cache
 
-            # Lth layer (SIGMOID -> LINEAR) gradients.
-            if l == L - 1:
-                dZ = dAL * ActivationFunction.sigmoid_derivative(Z)
-            else:  # lth layer: (RELU -> LINEAR) gradients.
-                dZ = dAL * ActivationFunction.relu_derivative(Z)
+            # calc dZ for hidden layer
+            dZ = dA_prev * ActivationFunction.relu_derivative(Z)
 
-            dW = np.dot(dZ, A_prev.T) / m
-            db = np.sum(dZ, axis=1, keepdims=True) / m
-            if l > 1:
-                dAL = np.dot(
-                    W.T, dZ
-                )  # This will be the dAL for the next iteration (previous layer)
+            # calc gradients
+            grads["dW" + str(l)] = (1 / m) * np.dot(dZ, A_prev.T)
+            grads["db" + str(l)] = (1 / m) * np.sum(dZ, axis=1, keepdims=True)
 
-            # Save the gradients for the current layer
-            grads["dW" + str(l)] = dW
-            grads["db" + str(l)] = db
+            # calc dA_prev for the next layer
+            dA_prev = np.dot(W.T, dZ)
 
         return grads
 
@@ -184,14 +192,11 @@ class SimpleNeuralNetwork:
             learning_rate: Learning rate of the gradient descent update rule.
         """
         L = self.L
+        learning_rate = self.config.learning_rate
 
         for l in range(1, L):
-            self.parameters["W" + str(l)] -= (
-                self.config.learning_rate * grads["dW" + str(l)]
-            )
-            self.parameters["b" + str(l)] -= (
-                self.config.learning_rate * grads["db" + str(l)]
-            )
+            self.parameters["W" + str(l)] -= learning_rate * grads["dW" + str(l)]
+            self.parameters["b" + str(l)] -= learning_rate * grads["db" + str(l)]
 
     def train(self, X: np.ndarray, Y: np.ndarray, iterations: int) -> None:
         """
@@ -214,16 +219,10 @@ class SimpleNeuralNetwork:
 
         """
         for i in range(iterations):
-            # Forward propagation
             AL, caches = self.forward_propagation(X)
-
-            # Compute cost
-            # cost = self.compute_loss(AL, Y)
-
-            # Backward propagation
+            # cost = self.compute_loss(AL, Y)  # calc cost for interest in transparency
             grads = self.backward_propagation(AL, Y, caches)
-
-            # Update parameters
+            # update parameters
             self.update_parameters(grads)
 
             # if i % 100 == 0:  # Print the cost every 100 iterations
@@ -239,15 +238,15 @@ class SimpleNeuralNetwork:
         Returns:
             Predicted labels or values for the input data.
         """
-        # Perform forward propagation to get the output activations
+        # run forward propagation to get the output activations
         AL, _ = self.forward_propagation(X)
 
-        # check for output layer/ model classification-type
+        # check for output layer/model classification-type
         if self.layer_dims[-1] == 1:
-            # For binary classification, you might use 0.5 as a threshold
+            # for binary classification, uses 0.5 threshold
             predictions = (AL > 0.5).astype(int)
         else:
-            # For multiclass classification, return the index of the max probability
+            # for multiclass-classification, return index of the max probability class
             predictions = np.argmax(AL, axis=0)
 
         return predictions

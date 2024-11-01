@@ -15,7 +15,6 @@ def test_activation_function_methods():
         "sigmoid",
         "softmax",
         "relu",
-        "sigmoid_derivative",
         "relu_derivative",
     ]
 
