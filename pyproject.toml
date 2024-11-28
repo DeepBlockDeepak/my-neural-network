@@ -17,6 +17,7 @@ python = ">=3.10"
 numpy = "^1.24.0"
 
 # Development dependencies for formatting and linting
+scikit-learn = "^1.5.2"
 [tool.poetry.dev-dependencies]
 isort = "^5.10.1"
 black = "^24.3.0"

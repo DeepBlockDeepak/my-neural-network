@@ -1,3 +1,5 @@
+from typing import Optional
+
 import numpy as np
 
 from activation_functions import ActivationFunction
@@ -5,11 +7,22 @@ from activation_functions import ActivationFunction
 
 class NeuralNetworkConfig:
     def __init__(
-        self, layer_dims: list[int], learning_rate: float = 0.01, seed: int = 1
+        self,
+        layer_dims: list[int],
+        learning_rate: float = 0.001,
+        seed: int = 42,
+        beta1=0.9,  # adam hyperparam
+        beta2=0.999,  # adam hyperparam
+        epsilon=1e-8,  # adam hyperparam
+        optimizer="adam",  # "adam" or "gradient_descent"
     ) -> None:
         self.layer_dims = layer_dims
-        self.learning_rate = learning_rate
+        self.learning_rate = learning_rate if optimizer == "adam" else 0.01
         self.seed = seed
+        self.beta1 = beta1
+        self.beta2 = beta2
+        self.epsilon = epsilon
+        self.optimizer = optimizer
 
 
 class SimpleNeuralNetwork:
@@ -26,6 +39,18 @@ class SimpleNeuralNetwork:
                 np.random.randn(self.layer_dims[l], self.layer_dims[l - 1]) * 0.01
             )
             self.parameters["b" + str(l)] = np.zeros((self.layer_dims[l], 1))
+
+    def initialize_adam(self):
+        """
+        Initializes the first (m) and second (v) moment estimates for Adam.
+        """
+        self.m = {}
+        self.v = {}
+        for l in range(1, self.L):
+            self.m["dW" + str(l)] = np.zeros_like(self.parameters["W" + str(l)])
+            self.m["db" + str(l)] = np.zeros_like(self.parameters["b" + str(l)])
+            self.v["dW" + str(l)] = np.zeros_like(self.parameters["W" + str(l)])
+            self.v["db" + str(l)] = np.zeros_like(self.parameters["b" + str(l)])
 
     def compute_loss(self, AL: np.ndarray, Y: np.ndarray) -> float:
         """
@@ -183,7 +208,7 @@ class SimpleNeuralNetwork:
 
         return grads
 
-    def update_parameters(self, grads: dict) -> None:
+    def update_parameters(self, grads: dict, t: Optional[int]) -> None:
         """
         Update the parameters using gradient descent.
 
@@ -193,12 +218,62 @@ class SimpleNeuralNetwork:
         """
         L = self.L
         learning_rate = self.config.learning_rate
+        optimizer = self.config.optimizer.lower()
 
-        for l in range(1, L):
-            self.parameters["W" + str(l)] -= learning_rate * grads["dW" + str(l)]
-            self.parameters["b" + str(l)] -= learning_rate * grads["db" + str(l)]
+        if optimizer == "gradient_descent":
+            for l in range(1, L):
+                self.parameters["W" + str(l)] -= learning_rate * grads["dW" + str(l)]
+                self.parameters["b" + str(l)] -= learning_rate * grads["db" + str(l)]
+        elif optimizer == "adam":
+            self.parameters = self.update_parameters_with_adam(t)
 
-    def train(self, X: np.ndarray, Y: np.ndarray, iterations: int) -> None:
+    def update_parameters_with_adam(self, grads, t):
+        """
+        Performs the Adam hyperparameter updates.
+
+        Args:
+            grads: weights and biases computed during backpropagation.
+            t: time step (epoch number) for bias corrections.
+        """
+        beta1 = self.config.beta1
+        beta2 = self.config.beta2
+        epsilon = self.config.epsilon
+        learning_rate = self.config.learning_rate
+
+        for l in range(1, self.L):
+            # moving average, m, of the gradients
+            self.m["dW" + str(l)] = (
+                beta1 * self.m["dW" + str(l)] + (1 - beta1) * grads["dW" + str(l)]
+            )
+            self.m["db" + str(l)] = (
+                beta1 * self.m["db" + str(l)] + (1 - beta1) * grads["db" + str(l)]
+            )
+
+            # bias-corrected first moment estimate
+            m_corrected_dW = self.m["dW" + str(l)] / (1 - beta1**t)
+            m_corrected_db = self.m["db" + str(l)] / (1 - beta1**t)
+
+            # moving average, v, of the squared gradients
+            self.v["dW" + str(l)] = beta2 * self.v["dW" + str(l)] + (
+                1 - beta2
+            ) * np.square(grads["dW" + str(l)])
+            self.v["db" + str(l)] = beta2 * self.v["db" + str(l)] + (
+                1 - beta2
+            ) * np.square(grads["db" + str(l)])
+
+            # bias-corrected second raw moment estimate
+            v_corrected_dW = self.v["dW" + str(l)] / (1 - beta2**t)
+            v_corrected_db = self.v["db" + str(l)] / (1 - beta2**t)
+
+            # Update parameters
+            self.parameters["W" + str(l)] -= learning_rate * (
+                m_corrected_dW / (np.sqrt(v_corrected_dW) + epsilon)
+            )
+            self.parameters["b" + str(l)] -= learning_rate * (
+                m_corrected_db / (np.sqrt(v_corrected_db) + epsilon)
+            )
+
+    def train(self, X: np.ndarray, Y: np.ndarray, epochs: int) -> None:
         """
         This method trains the neural network using gradient descent optimization.
         It iteratively performs forward propagation, computes the loss, backward propagation, and updates the parameters of the network.
@@ -206,7 +281,7 @@ class SimpleNeuralNetwork:
         Args:
             X: Input data matrix where each column represents a training example.
             Y: True label matrix where each column represents the true labels for the corresponding training example in X.
-            iterations: Number of training iterations.
+            epochs: Number of training epochs.
 
         Notes:
             During each iteration:
@@ -215,17 +290,28 @@ class SimpleNeuralNetwork:
             - Backward propagation is performed to compute gradients of the loss with respect to the parameters of the network.
             - The parameters of the network are updated using gradient descent with the computed gradients and the specified learning rate.
 
-            After every 100 iterations, the current cost (loss) is printed to monitor the training progress.
+            After every 100 epochs, the current cost (loss) is printed to monitor the training progress.
 
         """
-        for i in range(iterations):
+        optimizer = self.config.optimizer.lower()
+
+        if optimizer == "adam":
+            t = 0  # initial time step for Adam
+            self.initialize_adam()
+
+        for i in range(epochs):
             AL, caches = self.forward_propagation(X)
             # cost = self.compute_loss(AL, Y)  # calc cost for interest in transparency
             grads = self.backward_propagation(AL, Y, caches)
-            # update parameters
-            self.update_parameters(grads)
 
-            # if i % 100 == 0:  # Print the cost every 100 iterations
+            # update parameters
+            if optimizer == "adam":
+                t += 1
+                self.update_parameters_with_adam(grads, t)
+            else:
+                self.update_parameters(grads, t=None)
+
+            # if i % 100 == 0:  # Print the cost every 100 epochs
             #     print(f"Cost after iteration {i}: {cost}")
 
     def predict(self, X: np.ndarray) -> np.ndarray:

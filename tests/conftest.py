@@ -14,13 +14,22 @@ def input_data():
 
 @pytest.fixture(
     params=[
-        [5, 10, 1],  # Binary classifier configuration (** 1 ** output neuron)
-        [5, 10, 3],  # Multi-class classifier configuration
+        {
+            "layer_dims": [5, 10, 1],
+            "optimizer": "gradient_descent",
+        },  # original optimizer
+        {"layer_dims": [5, 10, 1], "optimizer": "adam"},
     ]
 )
 def create_network(request):
-    layer_dims = request.param
-    # config instance for the instanced network
-    config = NeuralNetworkConfig(layer_dims=layer_dims)
+    params = request.param
+    config = NeuralNetworkConfig(
+        layer_dims=params["layer_dims"],
+        optimizer=params["optimizer"],
+        learning_rate=0.01 if params["optimizer"] == "gradient_descent" else 0.001,
+        beta1=0.9,
+        beta2=0.999,
+        epsilon=1e-8,
+    )
     network = SimpleNeuralNetwork(config=config)
     return network

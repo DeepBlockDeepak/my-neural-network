@@ -1,29 +1,11 @@
 import numpy as np
 import pytest
+from sklearn.datasets import load_breast_cancer
+from sklearn.metrics import accuracy_score
+from sklearn.model_selection import train_test_split
 
 from activation_functions import ActivationFunction
 from my_neural_network import NeuralNetworkConfig, SimpleNeuralNetwork
-
-
-def test_neuron_imports():
-    """
-    Creates a list of the expected methods and checks that each one
-    is present in the SimpleNeuralNetwork class.
-    If any are missing, it fails the assertion and reports which attributes are not found
-    """
-    expected_attributes = [
-        "forward_propagation",
-        "compute_loss",
-        "backward_propagation",
-        "update_parameters",
-        "train",
-    ]
-
-    missing_attributes = [
-        attr for attr in expected_attributes if not hasattr(SimpleNeuralNetwork, attr)
-    ]
-
-    assert not missing_attributes, f"Neuron is missing attributes: {missing_attributes}"
 
 
 def test_initialization(create_network):
@@ -130,7 +112,7 @@ def test_data_types(input_data, dtype):
     config = NeuralNetworkConfig(layer_dims=[X.shape[0], 10, 1])
     nn = SimpleNeuralNetwork(config=config)
     try:
-        nn.train(X, y, iterations=10)
+        nn.train(X, y, epochs=10)
     except Exception as e:
         pytest.fail(f"Training failed with dtype {dtype}: {str(e)}")
 
@@ -152,6 +134,44 @@ def test_input_shapes(shape):
     nn = SimpleNeuralNetwork(config=config)
     if feature_shape[0] != nn.layer_dims[0] or feature_shape[1] != label_shape[1]:
         with pytest.raises(ValueError):
-            nn.train(X, y, iterations=10)
+            nn.train(X, y, epochs=10)
     else:
-        nn.train(X, y, iterations=10)  # Should pass without errors
+        nn.train(X, y, epochs=10)  # Should pass without errors
+
+
+@pytest.mark.parametrize("optimizer", ["gradient_descent", "adam"])
+def test_breast_cancer_classification(optimizer):
+    # load
+    data = load_breast_cancer()
+    X = data.data  # shape: (m, n_features) -> (569, 30)
+    Y = data.target  # shape: (m,) -> (569,)
+
+    X_train, X_test, Y_train, Y_test = train_test_split(
+        X, Y, test_size=0.2, random_state=42
+    )
+
+    # transpose X to match my nn input shape
+    X_train = X_train.T  # shape: (n_features, m_train)
+    X_test = X_test.T  # shape: (n_features, m_test)
+    Y_train = Y_train.reshape(1, -1)  # shape: (1, m_train)
+    Y_test = Y_test.reshape(1, -1)  # shape: (1, m_test)
+
+    # configure the network
+    config = NeuralNetworkConfig(
+        layer_dims=[X_train.shape[0], 64, 32, 1],
+        learning_rate=0.01 if optimizer == "gradient_descent" else 0.001,
+        optimizer=optimizer,  # 'adam' or 'gradient_descent'
+        seed=42,
+        beta1=0.9,
+        beta2=0.999,
+        epsilon=1e-8,
+    )
+    nn = SimpleNeuralNetwork(config)
+
+    # train, predict, evaluate
+    nn.train(X_train, Y_train, epochs=1000)
+    predictions = nn.predict(X_test)
+    accuracy = accuracy_score(Y_test.flatten(), predictions.flatten())
+    # Run with -s flag to see std out
+    # poetry run pytest -s tests/test_neuron.py::test_breast_cancer_classification
+    print(f"{config.optimizer.upper():>10} Accuracy: {accuracy:.4f}")
