@@ -36,11 +36,12 @@ class SimpleNeuralNetwork:
         np.random.seed(self.config.seed)
         for l in range(1, self.L):
             self.parameters["W" + str(l)] = (
-                np.random.randn(self.layer_dims[l], self.layer_dims[l - 1]) * 0.01
+                np.random.randn(self.layer_dims[l], self.layer_dims[l - 1]) * 0.01  # * np.sqrt(2 / self.layer_dims[l - 1]) 
             )
             self.parameters["b" + str(l)] = np.zeros((self.layer_dims[l], 1))
 
-    def initialize_adam(self):
+
+    def _initialize_adam(self):
         """
         Initializes the first (m) and second (v) moment estimates for Adam.
         """
@@ -51,6 +52,7 @@ class SimpleNeuralNetwork:
             self.m["db" + str(l)] = np.zeros_like(self.parameters["b" + str(l)])
             self.v["dW" + str(l)] = np.zeros_like(self.parameters["W" + str(l)])
             self.v["db" + str(l)] = np.zeros_like(self.parameters["b" + str(l)])
+
 
     def compute_loss(self, AL: np.ndarray, Y: np.ndarray) -> float:
         """
@@ -76,6 +78,7 @@ class SimpleNeuralNetwork:
         else:  # categorical cross-entropy for multi-class
             cost = -np.sum(Y * np.log(AL + 1e-8)) / m
         return np.squeeze(cost)  # reduce the dimensionality of the cost to a scalar
+
 
     def forward_propagation(self, X: np.ndarray) -> tuple[np.ndarray, list]:
         """
@@ -155,6 +158,7 @@ class SimpleNeuralNetwork:
         else:  # Multi-class classification- softmax activation
             return AL - Y
 
+
     def backward_propagation(self, AL: np.ndarray, Y: np.ndarray, caches: list) -> dict:
         """
         Perform the backward pass using gradient descent to compute the gradients of the loss function
@@ -208,6 +212,7 @@ class SimpleNeuralNetwork:
 
         return grads
 
+
     def update_parameters(self, grads: dict, t: Optional[int]) -> None:
         """
         Update the parameters using gradient descent.
@@ -225,9 +230,10 @@ class SimpleNeuralNetwork:
                 self.parameters["W" + str(l)] -= learning_rate * grads["dW" + str(l)]
                 self.parameters["b" + str(l)] -= learning_rate * grads["db" + str(l)]
         elif optimizer == "adam":
-            self.parameters = self.update_parameters_with_adam(t)
+            self.parameters = self._update_parameters_with_adam(t)
 
-    def update_parameters_with_adam(self, grads, t):
+
+    def _update_parameters_with_adam(self, grads, t):
         """
         Performs the Adam hyperparameter updates.
 
@@ -273,6 +279,7 @@ class SimpleNeuralNetwork:
                 m_corrected_db / (np.sqrt(v_corrected_db) + epsilon)
             )
 
+
     def train(self, X: np.ndarray, Y: np.ndarray, epochs: int) -> None:
         """
         This method trains the neural network using gradient descent optimization.
@@ -297,7 +304,7 @@ class SimpleNeuralNetwork:
 
         if optimizer == "adam":
             t = 0  # initial time step for Adam
-            self.initialize_adam()
+            self._initialize_adam()
 
         for i in range(epochs):
             AL, caches = self.forward_propagation(X)
@@ -307,12 +314,13 @@ class SimpleNeuralNetwork:
             # update parameters
             if optimizer == "adam":
                 t += 1
-                self.update_parameters_with_adam(grads, t)
+                self._update_parameters_with_adam(grads, t)
             else:
                 self.update_parameters(grads, t=None)
 
             # if i % 100 == 0:  # Print the cost every 100 epochs
             #     print(f"Cost after iteration {i}: {cost}")
+
 
     def predict(self, X: np.ndarray) -> np.ndarray:
         """
