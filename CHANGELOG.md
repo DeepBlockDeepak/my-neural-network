@@ -3,6 +3,7 @@
 ## [Unreleased]
 ### Added
 - Initial implementation of Adam with tests against Kaggle Cancer dataset.
+- Tests for simple NN on Kaggle Titanic datasets.
 
 ## [1.0.1] - 2024-11-27
 ### Added

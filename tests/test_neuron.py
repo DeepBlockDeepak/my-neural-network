@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import pytest
 from sklearn.datasets import load_breast_cancer
 from sklearn.metrics import accuracy_score
@@ -6,6 +7,7 @@ from sklearn.model_selection import train_test_split
 
 from activation_functions import ActivationFunction
 from my_neural_network import NeuralNetworkConfig, SimpleNeuralNetwork
+from tests.titanic_data.preprocess import preprocess_data
 
 
 def test_initialization(create_network):
@@ -174,4 +176,46 @@ def test_breast_cancer_classification(optimizer):
     accuracy = accuracy_score(Y_test.flatten(), predictions.flatten())
     # Run with -s flag to see std out
     # poetry run pytest -s tests/test_neuron.py::test_breast_cancer_classification
+    print(f"{config.optimizer.upper():>10} Accuracy: {accuracy:.4f}")
+
+
+@pytest.mark.parametrize("optimizer", ["gradient_descent", "adam"])
+def test_titanic_classification(optimizer):
+    # load
+    train_data = pd.read_csv("tests/titanic_data/train.csv")
+
+    # process data -> obtain pd.DataFrames of feature engineered train/test
+    X_train = preprocess_data(train_data)
+    y_train: pd.DataFrame = train_data["Survived"]  # extract labels
+    X_train, X_val, y_train, y_val = train_test_split(
+        X_train, y_train, test_size=0.2, random_state=0
+    )
+
+    # must use numpy!
+    X_train = X_train.to_numpy().T  # features as rows, samples as columns
+    X_val = X_val.to_numpy().T
+
+    y_train = y_train.to_numpy().flatten()  # reshape to (1, number of samples)
+    y_val = y_val.to_numpy().flatten()
+
+    # configure the network
+    config = NeuralNetworkConfig(
+        layer_dims=[X_train.shape[0], 40, 1],
+        learning_rate=0.01 if optimizer == "gradient_descent" else 0.001,
+        optimizer=optimizer,  # 'adam' or 'gradient_descent'
+        seed=42,
+        beta1=0.9,
+        beta2=0.999,
+        epsilon=1e-8,
+    )
+    nn = SimpleNeuralNetwork(config)
+
+    # train, predict, evaluate
+    nn.train(X_train, y_train, epochs=1000)
+    predictions = nn.predict(X_val)
+    predictions = np.asarray(predictions).flatten()
+    predictions = (predictions > 0.5).astype(int)  # convert probabilities to 0 or 1
+    accuracy = accuracy_score(y_val.flatten(), predictions.flatten())
+    # Run with -s flag to see std out
+    # poetry run pytest -s tests/test_neuron.py::test_titanic_classification
     print(f"{config.optimizer.upper():>10} Accuracy: {accuracy:.4f}")
