@@ -3,6 +3,7 @@ from typing import Optional
 import numpy as np
 
 from activation_functions import ActivationFunction
+from my_neural_network.error_handlers import validate_input_shapes
 
 
 class NeuralNetworkConfig:
@@ -312,7 +313,7 @@ class SimpleNeuralNetwork:
                 m_corrected_db / (np.sqrt(v_corrected_db) + epsilon)
             )
 
-
+    @validate_input_shapes
     def train(self, X: np.ndarray, Y: np.ndarray, epochs: int) -> None:
         """
         This method trains the neural network using gradient descent optimization.
@@ -333,20 +334,6 @@ class SimpleNeuralNetwork:
             After every 100 epochs, the current cost (loss) is printed to monitor the training progress.
 
         """
-        # check for consistent numbet of samples in X and Y
-        if X.shape[1] != Y.shape[1]:
-            raise ValueError(
-                f"Number of samples in X ({X.shape[1]}) and Y ({Y.shape[1]}) must be equal."
-            )
-        if X.shape[0] != self.layer_dims[0]:
-            raise ValueError(
-                f"Number of features in X ({X.shape[0]}) does not match the network's expected input dimension ({self.layer_dims[0]})."
-            )
-        if Y.shape[0] != self.layer_dims[-1]:
-            raise ValueError(
-                f"Number of output units in Y ({Y.shape[0]}) does not match the network's output layer dimension ({self.layer_dims[-1]})."
-            )
-
         optimizer = self.config.optimizer.lower()
 
         if optimizer == "adam":
@@ -361,7 +348,7 @@ class SimpleNeuralNetwork:
                 # cost = self.compute_loss(AL, Y)  # calc cost for interest in transparency
                 grads = self.backward_propagation(AL, mini_batch_Y, caches)
 
-                # update parameters
+                # update parameters according to optimizer method
                 if optimizer == "adam":
                     t += 1
                     self._update_parameters_with_adam(grads, t)
@@ -371,7 +358,7 @@ class SimpleNeuralNetwork:
                 # if i % 100 == 0:  # Print the cost every 100 epochs
                 #     print(f"Cost after iteration {i}: {cost}")
 
-
+    @validate_input_shapes
     def predict(self, X: np.ndarray) -> np.ndarray:
         """
         Predict the outputs for given input data using the trained neural network.
