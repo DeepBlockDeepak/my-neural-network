@@ -195,12 +195,12 @@ def test_titanic_classification(optimizer):
     X_train = X_train.to_numpy().T  # features as rows, samples as columns
     X_val = X_val.to_numpy().T
 
-    y_train = y_train.to_numpy().flatten()  # reshape to (1, number of samples)
-    y_val = y_val.to_numpy().flatten()
+    y_train = y_train.to_numpy().reshape(1, -1)  # reshape to (1, number of samples)
+    y_val = y_val.to_numpy().reshape(1, -1)
 
     # configure the network
     config = NeuralNetworkConfig(
-        layer_dims=[X_train.shape[0], 40, 1],
+        layer_dims=[X_train.shape[0], 64, 32, 1],
         learning_rate=0.01 if optimizer == "gradient_descent" else 0.001,
         optimizer=optimizer,  # 'adam' or 'gradient_descent'
         seed=42,

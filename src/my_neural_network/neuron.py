@@ -53,6 +53,44 @@ class SimpleNeuralNetwork:
             self.v["dW" + str(l)] = np.zeros_like(self.parameters["W" + str(l)])
             self.v["db" + str(l)] = np.zeros_like(self.parameters["b" + str(l)])
 
+    def _create_mini_batches(
+        self, X, Y, mini_batch_size, seed=None
+    ) -> list[tuple[np.ndarray]]:
+        """
+        Performs mini-batching of the training data.
+        Returns:
+            List of mini-batched data and labels
+        """
+        # setting up params for mini-batching
+        if seed is not None:
+            np.random.seed(seed)
+        m = X.shape[1]  # total number of samples
+        mini_batches = []
+
+        # shuffle data with random permutation
+        permutation = np.random.permutation(m)
+        shuffled_X = X[:, permutation]
+        shuffled_Y = Y[:, permutation].reshape(Y.shape[0], m)
+
+        # partition into mini batches
+        num_complete_minibatches = m // mini_batch_size
+        for k in range(num_complete_minibatches):
+            mini_batch_X = shuffled_X[
+                :, k * mini_batch_size : (k + 1) * mini_batch_size
+            ]
+            mini_batch_Y = shuffled_Y[
+                :, k * mini_batch_size : (k + 1) * mini_batch_size
+            ]
+            mini_batches.append((mini_batch_X, mini_batch_Y))
+
+        # handle the end case (the last mini-batch < mini_batch_size)
+        if m % mini_batch_size != 0:
+            mini_batch_X = shuffled_X[:, num_complete_minibatches * mini_batch_size :]
+            mini_batch_Y = shuffled_Y[:, num_complete_minibatches * mini_batch_size :]
+            mini_batches.append((mini_batch_X, mini_batch_Y))
+
+        return mini_batches
+
     def compute_loss(self, AL: np.ndarray, Y: np.ndarray) -> float:
         """
         Computes the binary cross-entropy loss or categorical cross-entropy loss depending on network type.
@@ -274,6 +312,7 @@ class SimpleNeuralNetwork:
                 m_corrected_db / (np.sqrt(v_corrected_db) + epsilon)
             )
 
+
     def train(self, X: np.ndarray, Y: np.ndarray, epochs: int) -> None:
         """
         This method trains the neural network using gradient descent optimization.
@@ -294,6 +333,20 @@ class SimpleNeuralNetwork:
             After every 100 epochs, the current cost (loss) is printed to monitor the training progress.
 
         """
+        # check for consistent numbet of samples in X and Y
+        if X.shape[1] != Y.shape[1]:
+            raise ValueError(
+                f"Number of samples in X ({X.shape[1]}) and Y ({Y.shape[1]}) must be equal."
+            )
+        if X.shape[0] != self.layer_dims[0]:
+            raise ValueError(
+                f"Number of features in X ({X.shape[0]}) does not match the network's expected input dimension ({self.layer_dims[0]})."
+            )
+        if Y.shape[0] != self.layer_dims[-1]:
+            raise ValueError(
+                f"Number of output units in Y ({Y.shape[0]}) does not match the network's output layer dimension ({self.layer_dims[-1]})."
+            )
+
         optimizer = self.config.optimizer.lower()
 
         if optimizer == "adam":
@@ -301,19 +354,23 @@ class SimpleNeuralNetwork:
             self._initialize_adam()
 
         for i in range(epochs):
-            AL, caches = self.forward_propagation(X)
-            # cost = self.compute_loss(AL, Y)  # calc cost for interest in transparency
-            grads = self.backward_propagation(AL, Y, caches)
 
-            # update parameters
-            if optimizer == "adam":
-                t += 1
-                self._update_parameters_with_adam(grads, t)
-            else:
-                self.update_parameters(grads, t=None)
+            mini_batches = self._create_mini_batches(X, Y, mini_batch_size=32, seed=42)
+            for mini_batch_X, mini_batch_Y in mini_batches:
+                AL, caches = self.forward_propagation(mini_batch_X)
+                # cost = self.compute_loss(AL, Y)  # calc cost for interest in transparency
+                grads = self.backward_propagation(AL, mini_batch_Y, caches)
 
-            # if i % 100 == 0:  # Print the cost every 100 epochs
-            #     print(f"Cost after iteration {i}: {cost}")
+                # update parameters
+                if optimizer == "adam":
+                    t += 1
+                    self._update_parameters_with_adam(grads, t)
+                else:
+                    self.update_parameters(grads, t=None)
+
+                # if i % 100 == 0:  # Print the cost every 100 epochs
+                #     print(f"Cost after iteration {i}: {cost}")
+
 
     def predict(self, X: np.ndarray) -> np.ndarray:
         """
