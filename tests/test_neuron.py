@@ -1,9 +1,11 @@
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import pytest
 from sklearn.datasets import load_breast_cancer
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
 
 from activation_functions import ActivationFunction
 from my_neural_network import NeuralNetworkConfig, SimpleNeuralNetwork
@@ -179,6 +181,7 @@ def test_breast_cancer_classification(optimizer):
     print(f"{config.optimizer.upper():>10} Accuracy: {accuracy:.4f}")
 
 
+# poetry run pytest -s tests/test_neuron.py::test_titanic_classification
 @pytest.mark.parametrize("optimizer", ["gradient_descent", "adam"])
 def test_titanic_classification(optimizer):
     # load
@@ -219,3 +222,109 @@ def test_titanic_classification(optimizer):
     # Run with -s flag to see std out
     # poetry run pytest -s tests/test_neuron.py::test_titanic_classification
     print(f"{config.optimizer.upper():>10} Accuracy: {accuracy:.4f}")
+
+
+# poetry run pytest -s tests/test_neuron.py::test_streeteasy_regression\[adam\]
+@pytest.mark.parametrize(
+    "optimizer", ["adam"]
+)  # removing "gradient_descent" due to exploding params
+def test_streeteasy_regression(optimizer):
+    # load
+    apartments_df = pd.read_csv("tests/street_easy_data/streeteasy.csv")
+
+    # features and target
+    numerical_features = [
+        "bedrooms",
+        "bathrooms",
+        "size_sqft",
+        "min_to_subway",
+        "floor",
+        "building_age_yrs",
+        "no_fee",
+        "has_roofdeck",
+        "has_washer_dryer",
+        "has_doorman",
+        "has_elevator",
+        "has_dishwasher",
+        "has_patio",
+        "has_gym",
+    ]
+    X = apartments_df[numerical_features].to_numpy().T  # shape: (n_features, m)
+    y = apartments_df["rent"].to_numpy().reshape(1, -1)  # shape: (1, m)
+
+    # split
+    X_train, X_test, y_train, y_test = train_test_split(
+        X.T, y.T, test_size=0.2, random_state=42
+    )
+
+    # transpose back to (n_features, m)
+    X_train = X_train.T
+    X_test = X_test.T
+    y_train = y_train.T
+    y_test = y_test.T
+
+    # standardize features
+    scaler = StandardScaler()
+    X_train = scaler.fit_transform(X_train.T).T  # fit on training data
+    X_test = scaler.transform(X_test.T).T  # transform test data
+
+    # network config
+    config = NeuralNetworkConfig(
+        layer_dims=[X_train.shape[0], 128, 64, 1],
+        learning_rate=0.01 if optimizer == "gradient_descent" else 0.001,
+        optimizer=optimizer,
+        seed=42,
+        beta1=0.9,
+        beta2=0.999,
+        epsilon=1e-8,
+        task="regression",  # specify regression task for streeteasy
+    )
+    nn = SimpleNeuralNetwork(config)
+
+    # train
+    nn.train(X_train, y_train, epochs=2000)
+
+    # predict
+    predictions = nn.predict(X_test)
+
+    # evaluate
+    mse = np.mean((predictions - y_test) ** 2)
+    rmse = np.sqrt(mse)
+
+    # results
+    print(f"{config.optimizer.upper():>10} Test MSE: {mse:.4f}")
+    print(f"{config.optimizer.upper():>10} Test RMSE: {rmse:.4f}")
+
+    # Plotting and saving predictions vs actual vals
+    y_test_flat = y_test.flatten()
+    predictions_flat = predictions.flatten()
+
+    plt.figure(figsize=(10, 6))
+    plt.scatter(
+        y_test_flat, predictions_flat, alpha=0.5, color="blue", label="Predictions"
+    )
+
+    # plotting line y = x
+    max_value = max(y_test_flat.max(), predictions_flat.max())
+    min_value = min(y_test_flat.min(), predictions_flat.min())
+    plt.plot(
+        [min_value, max_value],
+        [min_value, max_value],
+        linestyle="--",
+        color="pink",
+        label="y = x",
+    )
+
+    plt.xlabel("Actual Rent")
+    plt.ylabel("Predicted Rent")
+    plt.title(
+        f"Predicted vs Actual Rent Values ({config.optimizer.upper()} with RMSE = {rmse:.2f})"
+    )
+    plt.legend()
+
+    # saving plot
+    plot_filename = (
+        f"tests/street_easy_data/streeteasy_predictions_{config.optimizer}.png"
+    )
+    plt.savefig(plot_filename)
+    plt.close()

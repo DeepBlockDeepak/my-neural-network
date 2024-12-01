@@ -4,6 +4,7 @@
 ### Added
 - Initial implementation of Adam with tests against Kaggle Cancer dataset.
 - Tests for simple NN on Kaggle Titanic datasets.
+- Tests for regression tasks using Streeteasy NYC dataset.
 
 ## [1.0.1] - 2024-11-27
 ### Added

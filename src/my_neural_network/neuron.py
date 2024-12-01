@@ -15,7 +15,8 @@ class NeuralNetworkConfig:
         beta1=0.9,  # adam hyperparam
         beta2=0.999,  # adam hyperparam
         epsilon=1e-8,  # adam hyperparam
-        optimizer="adam",  # "adam" or "gradient_descent"
+        optimizer="adam",  # "adam" or "gradient_descent",
+        task: str = "classification",  # "classification" or "regression"
     ) -> None:
         self.layer_dims = layer_dims
         self.learning_rate = learning_rate if optimizer == "adam" else 0.01
@@ -24,6 +25,7 @@ class NeuralNetworkConfig:
         self.beta2 = beta2
         self.epsilon = epsilon
         self.optimizer = optimizer
+        self.task = task
 
 
 class SimpleNeuralNetwork:
@@ -110,11 +112,23 @@ class SimpleNeuralNetwork:
             float: The average binary cross-entropy loss across all examples in the dataset.
         """
         m = Y.shape[1]  # number of samples
-        if Y.shape[0] == 1:  # Binary cross-entropy
-            # 1e-8 is added for numerical stability to avoid log(0)
-            cost = -np.sum(Y * np.log(AL + 1e-8) + (1 - Y) * np.log(1 - AL + 1e-8)) / m
-        else:  # categorical cross-entropy for multi-class
-            cost = -np.sum(Y * np.log(AL + 1e-8)) / m
+
+        if (task := self.config.task.lower()) == "classification":
+            if Y.shape[0] == 1:  # Binary cross-entropy
+                # 1e-8 is added for numerical stability to avoid log(0)
+                cost = (
+                    -np.sum(Y * np.log(AL + 1e-8) + (1 - Y) * np.log(1 - AL + 1e-8)) / m
+                )
+            else:  # categorical cross-entropy for multi-class
+                cost = -np.sum(Y * np.log(AL + 1e-8)) / m
+        elif task == "regression":
+            # Mean Squared Error (MSE) loss
+            cost = np.sum((AL - Y) ** 2) / (2 * m)
+        else:
+            raise ValueError(
+                "Invalid task type. Must be 'classification' or 'regression'."
+            )
+
         return np.squeeze(cost)  # reduce the dimensionality of the cost to a scalar
 
     def forward_propagation(self, X: np.ndarray) -> tuple[np.ndarray, list]:
@@ -162,17 +176,24 @@ class SimpleNeuralNetwork:
         if np.isnan(Z).any() or np.isinf(Z).any():
             print("NaN or Inf detected in Z")
 
-        # activation func for output layer
-        if self.layer_dims[-1] == 1:
-            AL = ActivationFunction.sigmoid(
-                Z
-            )  # Binary classification (single neuron in output layer)
+        if (task := self.config.task.lower()) == "classification":
+            # activation func for output layer
+            if self.layer_dims[-1] == 1:
+                AL = ActivationFunction.sigmoid(
+                    Z
+                )  # Binary classification (single neuron in output layer)
+            else:
+                AL = ActivationFunction.softmax(
+                    Z
+                )  # Multi-class classification (more than one neuron)
+        elif task == "regression":
+            AL = Z  # linear activation for regression (no activation func)
         else:
-            AL = ActivationFunction.softmax(
-                Z
-            )  # Multi-class classification (more than one neuron)
+            raise ValueError(
+                "Invalid task type. Must be 'classification' or 'regression'."
+            )
 
-        # A here is the activation from the last hidden layer.
+        # `A` here is the activation from the last hidden layer.
         caches.append((A, W, b, Z))
 
         return AL, caches
@@ -217,12 +238,20 @@ class SimpleNeuralNetwork:
         m = AL.shape[1]
         Y = Y.reshape(AL.shape)  # ensure Y has the same shape as AL
 
-        # initialize backpropagation for output layer
-        dZ = AL - Y  # for the output layer (layer L-1); same for binary & multi-class
-
         # retrieve cache for the output layer, layer L-1
         current_cache = caches[-1]
         A_prev, W, b, Z = current_cache
+
+        # initialize backpropagation for output layer
+        # dZ = AL - Y  # for the output layer (layer L-1); same for binary & multi-class
+        if (task := self.config.task.lower()) == "classification":
+            dZ = AL - Y  # For both sigmoid and softmax with cross-entropy
+        elif task == "regression":
+            dZ = AL - Y  # Derivative of MSE loss with linear activation
+        else:
+            raise ValueError(
+                "Invalid task type. Must be 'classification' or 'regression'."
+            )
 
         # calc gradients for the output layer
         grads["dW" + str(L - 1)] = (1 / m) * np.dot(dZ, A_prev.T)
@@ -305,7 +334,7 @@ class SimpleNeuralNetwork:
             v_corrected_dW = self.v["dW" + str(l)] / (1 - beta2**t)
             v_corrected_db = self.v["db" + str(l)] / (1 - beta2**t)
 
-            # Update parameters
+            # update parameters
             self.parameters["W" + str(l)] -= learning_rate * (
                 m_corrected_dW / (np.sqrt(v_corrected_dW) + epsilon)
             )
@@ -341,11 +370,12 @@ class SimpleNeuralNetwork:
             self._initialize_adam()
 
         for i in range(epochs):
-
             mini_batches = self._create_mini_batches(X, Y, mini_batch_size=32, seed=42)
+            # epoch_cost = 0
             for mini_batch_X, mini_batch_Y in mini_batches:
                 AL, caches = self.forward_propagation(mini_batch_X)
-                # cost = self.compute_loss(AL, Y)  # calc cost for interest in transparency
+                # cost = self.compute_loss(AL, mini_batch_Y)
+                # epoch_cost += cost
                 grads = self.backward_propagation(AL, mini_batch_Y, caches)
 
                 # update parameters according to optimizer method
@@ -355,8 +385,10 @@ class SimpleNeuralNetwork:
                 else:
                     self.update_parameters(grads, t=None)
 
-                # if i % 100 == 0:  # Print the cost every 100 epochs
-                #     print(f"Cost after iteration {i}: {cost}")
+            # print the cost every 'n' epochs
+            # if (i + 1) % 100 == 0 or i == 0:
+            #     average_cost = epoch_cost / len(mini_batches)
+            #     print(f"Cost after epoch {i + 1}: {average_cost}")
 
     @validate_input_shapes
     def predict(self, X: np.ndarray) -> np.ndarray:
@@ -372,12 +404,19 @@ class SimpleNeuralNetwork:
         # run forward propagation to get the output activations
         AL, _ = self.forward_propagation(X)
 
-        # check for output layer/model classification-type
-        if self.layer_dims[-1] == 1:
-            # for binary classification, uses 0.5 threshold
-            predictions = (AL > 0.5).astype(int)
+        if (task := self.config.task.lower()) == "classification":
+            # check for output layer/model classification-type
+            if self.layer_dims[-1] == 1:
+                # for binary classification, uses 0.5 threshold
+                predictions = (AL > 0.5).astype(int)
+            else:
+                # for multiclass-classification, return index of the max probability class
+                predictions = np.argmax(AL, axis=0)
+        elif task == "regression":
+            predictions = AL  # continuous values for regression
         else:
-            # for multiclass-classification, return index of the max probability class
-            predictions = np.argmax(AL, axis=0)
+            raise ValueError(
+                "Invalid task type. Must be 'classification' or 'regression'."
+            )
 
         return predictions
