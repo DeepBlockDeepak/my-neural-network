@@ -9,6 +9,7 @@ from sklearn.preprocessing import StandardScaler
 
 from activation_functions import ActivationFunction
 from my_neural_network import NeuralNetworkConfig, SimpleNeuralNetwork
+from my_neural_network.constants import OptimizerType, TaskType
 from tests.titanic_data.preprocess import preprocess_data
 
 
@@ -143,7 +144,7 @@ def test_input_shapes(shape):
         nn.train(X, y, epochs=10)  # Should pass without errors
 
 
-@pytest.mark.parametrize("optimizer", ["gradient_descent", "adam"])
+@pytest.mark.parametrize("optimizer", [OptimizerType.SGD, OptimizerType.ADAM])
 def test_breast_cancer_classification(optimizer):
     # load
     data = load_breast_cancer()
@@ -163,9 +164,10 @@ def test_breast_cancer_classification(optimizer):
     # configure the network
     config = NeuralNetworkConfig(
         layer_dims=[X_train.shape[0], 64, 32, 1],
-        learning_rate=0.01 if optimizer == "gradient_descent" else 0.001,
+        learning_rate=0.01 if optimizer == OptimizerType.SGD else 0.001,
         optimizer=optimizer,  # 'adam' or 'gradient_descent'
         seed=42,
+        mini_batch_size=10,
         beta1=0.9,
         beta2=0.999,
         epsilon=1e-8,
@@ -178,11 +180,11 @@ def test_breast_cancer_classification(optimizer):
     accuracy = accuracy_score(Y_test.flatten(), predictions.flatten())
     # Run with -s flag to see std out
     # poetry run pytest -s tests/test_neuron.py::test_breast_cancer_classification
-    print(f"{config.optimizer.upper():>10} Accuracy: {accuracy:.4f}")
+    print(f"{optimizer.value.upper():>10} Accuracy: {accuracy:.4f}")
 
 
 # poetry run pytest -s tests/test_neuron.py::test_titanic_classification
-@pytest.mark.parametrize("optimizer", ["gradient_descent", "adam"])
+@pytest.mark.parametrize("optimizer", [OptimizerType.SGD, OptimizerType.ADAM])
 def test_titanic_classification(optimizer):
     # load
     train_data = pd.read_csv("tests/titanic_data/train.csv")
@@ -204,9 +206,10 @@ def test_titanic_classification(optimizer):
     # configure the network
     config = NeuralNetworkConfig(
         layer_dims=[X_train.shape[0], 64, 32, 1],
-        learning_rate=0.01 if optimizer == "gradient_descent" else 0.001,
+        learning_rate=0.01 if optimizer == OptimizerType.SGD else 0.001,
         optimizer=optimizer,  # 'adam' or 'gradient_descent'
         seed=42,
+        mini_batch_size=32,
         beta1=0.9,
         beta2=0.999,
         epsilon=1e-8,
@@ -221,13 +224,13 @@ def test_titanic_classification(optimizer):
     accuracy = accuracy_score(y_val.flatten(), predictions.flatten())
     # Run with -s flag to see std out
     # poetry run pytest -s tests/test_neuron.py::test_titanic_classification
-    print(f"{config.optimizer.upper():>10} Accuracy: {accuracy:.4f}")
+    print(f"{optimizer.value.upper():>10} Accuracy: {accuracy:.4f}")
 
 
 # poetry run pytest -s tests/test_neuron.py::test_streeteasy_regression\[adam\]
 @pytest.mark.parametrize(
-    "optimizer", ["adam"]
-)  # removing "gradient_descent" due to exploding params
+    "optimizer", [OptimizerType.ADAM]
+)  # removing OptimizerType.SGD from params due to exploding NN params
 def test_streeteasy_regression(optimizer):
     # load
     apartments_df = pd.read_csv("tests/street_easy_data/streeteasy.csv")
@@ -271,13 +274,14 @@ def test_streeteasy_regression(optimizer):
     # network config
     config = NeuralNetworkConfig(
         layer_dims=[X_train.shape[0], 128, 64, 1],
-        learning_rate=0.01 if optimizer == "gradient_descent" else 0.001,
+        learning_rate=0.01 if optimizer == OptimizerType.SGD else 0.001,
         optimizer=optimizer,
         seed=42,
+        mini_batch_size=200,
         beta1=0.9,
         beta2=0.999,
         epsilon=1e-8,
-        task="regression",  # specify regression task for streeteasy
+        task=TaskType.REGRESSION,  # specify regression task for streeteasy
     )
     nn = SimpleNeuralNetwork(config)
 
@@ -292,8 +296,8 @@ def test_streeteasy_regression(optimizer):
     rmse = np.sqrt(mse)
 
     # results
-    print(f"{config.optimizer.upper():>10} Test MSE: {mse:.4f}")
-    print(f"{config.optimizer.upper():>10} Test RMSE: {rmse:.4f}")
+    print(f"{optimizer.value.upper():>10} Test MSE: {mse:.4f}")
+    print(f"{optimizer.value.upper():>10} Test RMSE: {rmse:.4f}")
 
     # Plotting and saving predictions vs actual vals
     y_test_flat = y_test.flatten()
@@ -318,7 +322,7 @@ def test_streeteasy_regression(optimizer):
     plt.xlabel("Actual Rent")
     plt.ylabel("Predicted Rent")
     plt.title(
-        f"Predicted vs Actual Rent Values ({config.optimizer.upper()} with RMSE = {rmse:.2f})"
+        f"Predicted vs Actual Rent Values ({config.optimizer.value.upper()} with RMSE = {rmse:.2f})"
     )
     plt.legend()
 
