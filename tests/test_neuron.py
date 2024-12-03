@@ -175,7 +175,7 @@ def test_breast_cancer_classification(optimizer):
     nn = SimpleNeuralNetwork(config)
 
     # train, predict, evaluate
-    nn.train(X_train, Y_train, epochs=1000)
+    nn.train(X_train, Y_train, epochs=1000, X_val=X_test, Y_val=Y_test)
     predictions = nn.predict(X_test)
     accuracy = accuracy_score(Y_test.flatten(), predictions.flatten())
     # Run with -s flag to see std out
@@ -217,7 +217,7 @@ def test_titanic_classification(optimizer):
     nn = SimpleNeuralNetwork(config)
 
     # train, predict, evaluate
-    nn.train(X_train, y_train, epochs=1000)
+    nn.train(X_train, y_train, epochs=1000, X_val=X_val, Y_val=y_val)
     predictions = nn.predict(X_val)
     predictions = np.asarray(predictions).flatten()
     predictions = (predictions > 0.5).astype(int)  # convert probabilities to 0 or 1
@@ -227,9 +227,9 @@ def test_titanic_classification(optimizer):
     print(f"{optimizer.value.upper():>10} Accuracy: {accuracy:.4f}")
 
 
-# poetry run pytest -s tests/test_neuron.py::test_streeteasy_regression\[adam\]
+# poetry run pytest -s tests/test_neuron.py::test_streeteasy_regression\[OptimizerType.ADAM\]
 @pytest.mark.parametrize(
-    "optimizer", [OptimizerType.ADAM]
+    "optimizer", [OptimizerType.ADAM, OptimizerType.SGD]
 )  # removing OptimizerType.SGD from params due to exploding NN params
 def test_streeteasy_regression(optimizer):
     # load
@@ -286,7 +286,7 @@ def test_streeteasy_regression(optimizer):
     nn = SimpleNeuralNetwork(config)
 
     # train
-    nn.train(X_train, y_train, epochs=2000)
+    nn.train(X_train, y_train, epochs=2000, X_val=X_test, Y_val=y_test)
 
     # predict
     predictions = nn.predict(X_test)
@@ -296,7 +296,6 @@ def test_streeteasy_regression(optimizer):
     rmse = np.sqrt(mse)
 
     # results
-    print(f"{optimizer.value.upper():>10} Test MSE: {mse:.4f}")
     print(f"{optimizer.value.upper():>10} Test RMSE: {rmse:.4f}")
 
     # Plotting and saving predictions vs actual vals
@@ -322,7 +321,7 @@ def test_streeteasy_regression(optimizer):
     plt.xlabel("Actual Rent")
     plt.ylabel("Predicted Rent")
     plt.title(
-        f"Predicted vs Actual Rent Values ({config.optimizer.value.upper()} with RMSE = {rmse:.2f})"
+        f"Predicted vs Actual Rent Values ({optimizer.value.upper()} with RMSE = {rmse:.2f})"
     )
     plt.legend()
 
