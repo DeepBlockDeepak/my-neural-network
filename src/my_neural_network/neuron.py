@@ -1,4 +1,5 @@
 import numpy as np
+from tqdm import tqdm
 
 from activation_functions import ActivationFunction
 from my_neural_network.constants import OptimizerType, TaskType
@@ -352,7 +353,15 @@ class SimpleNeuralNetwork:
             )
 
     @validate_input_shapes
-    def train(self, X: np.ndarray, Y: np.ndarray, epochs: int) -> None:
+    def train(
+        self,
+        X: np.ndarray,
+        Y: np.ndarray,
+        epochs: int,
+        X_val: np.ndarray = None,
+        Y_val: np.ndarray = None,
+        patience: int = 10,
+    ) -> None:
         """
         This method trains the neural network using gradient descent optimization.
         It iteratively performs forward propagation, computes the loss, backward propagation, and updates the parameters of the network.
@@ -361,6 +370,9 @@ class SimpleNeuralNetwork:
             X: Input data matrix where each column represents a training example.
             Y: True label matrix where each column represents the true labels for the corresponding training example in X.
             epochs: Number of training epochs.
+            X_val: Validation input data (optional).
+            Y_val: Validation labels (optional).
+            patience: Number of epochs to wait for improvement before stopping early.
 
         Notes:
             During each iteration:
@@ -369,7 +381,7 @@ class SimpleNeuralNetwork:
             - Backward propagation is performed to compute gradients of the loss with respect to the parameters of the network.
             - The parameters of the network are updated using gradient descent with the computed gradients and the specified learning rate.
 
-            After every 100 epochs, the current cost (loss) is printed to monitor the training progress.
+            - Early stopping will only work if validation data is provided.
 
         """
         optimizer = self.config.optimizer
@@ -378,27 +390,56 @@ class SimpleNeuralNetwork:
         if optimizer == OptimizerType.ADAM:
             self._initialize_adam()
 
-        for i in range(epochs):
-            mini_batches = self._create_mini_batches(
-                X, Y, mini_batch_size=self.config.mini_batch_size, seed=42
-            )
-            # epoch_cost = 0
-            for mini_batch_X, mini_batch_Y in mini_batches:
-                AL, caches = self.forward_propagation(mini_batch_X)
-                # cost = self.compute_loss(AL, mini_batch_Y)
-                # epoch_cost += cost
-                grads = self.backward_propagation(AL, mini_batch_Y, caches)
+        best_val_loss = float("inf")
+        patience_counter = 0
+        with tqdm(total=epochs, desc="Training Progress") as pbar:
+            for i in range(epochs):
+                mini_batches = self._create_mini_batches(
+                    X, Y, mini_batch_size=self.config.mini_batch_size, seed=42
+                )
+                epoch_cost = 0
+                for mini_batch_X, mini_batch_Y in mini_batches:
+                    AL, caches = self.forward_propagation(mini_batch_X)
+                    cost = self.compute_loss(AL, mini_batch_Y)
 
-                # update parameters according to optimizer method
-                if optimizer == OptimizerType.ADAM:
-                    t += 1
+                    # check for NaN or Inf in the cost, (exploding gradients)
+                    if np.isnan(cost) or np.isinf(cost):
+                        print(
+                            f"NaN or Inf detected in cost at epoch {i + 1}. Stopping training."
+                        )
+                        pbar.close()
+                        return
 
-                self.update_parameters(grads, t)
+                    epoch_cost += cost
+                    grads = self.backward_propagation(AL, mini_batch_Y, caches)
 
-            # print the cost every 'n' epochs
-            # if (i + 1) % 100 == 0 or i == 0:
-            #     average_cost = epoch_cost / len(mini_batches)
-            #     print(f"Cost after epoch {i + 1}: {average_cost}")
+                    # update parameters according to optimizer method
+                    if optimizer == OptimizerType.ADAM:
+                        t += 1
+
+                    self.update_parameters(grads, t)
+
+                # Validation phase (if validation data is provided)
+                if X_val is not None and Y_val is not None:
+                    AL_val, _ = self.forward_propagation(X_val)
+                    val_loss = self.compute_loss(AL_val, Y_val)
+
+                    # print(
+                    #     f"Epoch {i + 1}: Train Loss = {epoch_cost / len(mini_batches):.4f}, "
+                    #     f"Validation Loss = {val_loss:.4f}"
+                    # )
+
+                    # Check for early stopping
+                    if val_loss < best_val_loss:
+                        best_val_loss = val_loss
+                        patience_counter = 0  # Reset patience counter
+                    else:
+                        patience_counter += 1
+                        if patience_counter >= patience:
+                            print(f"Early stopping triggered at epoch {i + 1}")
+                            break
+
+                pbar.update(1)
 
     @validate_input_shapes
     def predict(self, X: np.ndarray) -> np.ndarray:
