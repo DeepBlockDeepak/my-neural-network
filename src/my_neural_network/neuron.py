@@ -50,10 +50,11 @@ class SimpleNeuralNetwork:
         # initialize parameters
         np.random.seed(self.config.seed)
         for l in range(1, self.L):
-            self.parameters["W" + str(l)] = (
-                np.random.randn(self.layer_dims[l], self.layer_dims[l - 1])
-                * 0.01  # * np.sqrt(2 / self.layer_dims[l - 1])
-            )
+            self.parameters["W" + str(l)] = np.random.randn(
+                self.layer_dims[l], self.layer_dims[l - 1]
+            ) * np.sqrt(
+                2 / self.layer_dims[l - 1]
+            )  # without He: * 0.01
             self.parameters["b" + str(l)] = np.zeros((self.layer_dims[l], 1))
 
     def _initialize_adam(self):
