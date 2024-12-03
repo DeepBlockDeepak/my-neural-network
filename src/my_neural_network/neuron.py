@@ -1,4 +1,5 @@
 import numpy as np
+from pydantic import BaseModel, Field, field_validator
 from tqdm import tqdm
 
 from activation_functions import ActivationFunction
@@ -6,28 +7,37 @@ from my_neural_network.constants import OptimizerType, TaskType
 from my_neural_network.error_handlers import validate_input_shapes
 
 
-class NeuralNetworkConfig:
-    def __init__(
-        self,
-        layer_dims: list[int],
-        learning_rate: float = 0.001,
-        seed: int = 42,
-        mini_batch_size: int = 32,
-        beta1: float = 0.9,  # adam hyperparam
-        beta2: float = 0.999,  # adam hyperparam
-        epsilon: float = 1e-8,  # adam hyperparam
-        optimizer=OptimizerType.ADAM,  # "adam" or "gradient_descent",
-        task=TaskType.CLASSIFICATION,  # "classification" or "regression"
-    ) -> None:
-        self.layer_dims = layer_dims
-        self.learning_rate = learning_rate if optimizer == OptimizerType.ADAM else 0.01
-        self.seed = seed
-        self.mini_batch_size = mini_batch_size
-        self.beta1 = beta1
-        self.beta2 = beta2
-        self.epsilon = epsilon
-        self.optimizer = optimizer
-        self.task = task
+class NeuralNetworkConfig(BaseModel):
+    layer_dims: list[int]
+    learning_rate: float = Field(0.001, ge=0.0)
+    seed: int = Field(42, ge=0)
+    mini_batch_size: int = Field(32, ge=1)
+    beta1: float = Field(0.9, ge=0.0, le=1.0)  # adam hyperparameter
+    beta2: float = Field(0.999, ge=0.0, le=1.0)  # adam hyperparameter
+    epsilon: float = Field(1e-8, gt=0.0)  # adam hyperparameter
+    optimizer: OptimizerType = OptimizerType.ADAM  # "ADAM" or "SGD",
+    task: TaskType = TaskType.CLASSIFICATION  # "classification" or "regression"
+
+    @field_validator("learning_rate", mode="before")
+    @classmethod
+    def adjust_learning_rate(cls, value: float, info) -> float:
+        # access the optimizer from other fields
+        optimizer = info.data.get(
+            "optimizer", OptimizerType.ADAM
+        )  # default to Adam if optimizer isn't set
+        if optimizer == OptimizerType.SGD:
+            return 0.01 if value is None else value  # default lr for SGD is 0.01
+        return value if value is not None else 0.001  # default for Adam is 0.001
+
+    # ensure the layer_dims list has at least two layers (input and output)
+    @field_validator("layer_dims", mode="before")
+    @classmethod
+    def validate_layer_dims(cls, value: list[int]) -> list[int]:
+        if len(value) < 2:
+            raise ValueError(
+                "layer_dims must have at least two elements (input and output layers)."
+            )
+        return value
 
 
 class SimpleNeuralNetwork:
