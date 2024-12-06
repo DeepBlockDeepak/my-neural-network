@@ -144,7 +144,9 @@ class SimpleNeuralNetwork:
 
         return np.squeeze(cost)  # reduce the dimensionality of the cost to a scalar
 
-    def forward_propagation(self, X: np.ndarray, mode: str = "train") -> tuple[np.ndarray, list]:
+    def forward_propagation(
+        self, X: np.ndarray, mode: str = "train"
+    ) -> tuple[np.ndarray, list]:
         """
         Performs the forward pass through the network for binary or multiclass classification.
         Computes the activation at each layer by applying the linear transformation followed by the activation function.
@@ -179,16 +181,17 @@ class SimpleNeuralNetwork:
             b = self.parameters["b" + str(l)]
             Z = np.dot(W, A_prev) + b
             A = ActivationFunction.relu(Z)  # ReLU activation for all hidden layers
-            
-            if mode == 'train':
+
+            if mode == "train":
                 # apply dropout
                 D = np.random.rand(A.shape[0], A.shape[1]) < self.config.keep_prob
                 A = A * D
                 A = A / self.config.keep_prob  # inverted dropout scaling
                 caches.append((A_prev, W, b, Z, D))
             else:
-                caches.append((A_prev, W, b, Z, None))  # no dropout mask during inference
-
+                caches.append(
+                    (A_prev, W, b, Z, None)
+                )  # no dropout mask during inference
 
         # final activation leading to output layer
         W = self.parameters["W" + str(self.L - 1)]
