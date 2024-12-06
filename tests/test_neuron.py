@@ -164,13 +164,15 @@ def test_breast_cancer_classification(optimizer):
     # configure the network
     config = NeuralNetworkConfig(
         layer_dims=[X_train.shape[0], 64, 32, 1],
-        learning_rate=0.01 if optimizer == OptimizerType.SGD else 0.001,
         optimizer=optimizer,  # 'adam' or 'gradient_descent'
         seed=42,
         mini_batch_size=10,
         beta1=0.9,
         beta2=0.999,
         epsilon=1e-8,
+        C=0.05,
+        warmup_steps=500,
+        task=TaskType.CLASSIFICATION,
     )
     nn = SimpleNeuralNetwork(config)
 
@@ -206,13 +208,15 @@ def test_titanic_classification(optimizer):
     # configure the network
     config = NeuralNetworkConfig(
         layer_dims=[X_train.shape[0], 64, 32, 1],
-        learning_rate=0.01 if optimizer == OptimizerType.SGD else 0.001,
         optimizer=optimizer,  # 'adam' or 'gradient_descent'
         seed=42,
         mini_batch_size=32,
         beta1=0.9,
         beta2=0.999,
         epsilon=1e-8,
+        C=0.03,
+        warmup_steps=300,
+        task=TaskType.CLASSIFICATION,
     )
     nn = SimpleNeuralNetwork(config)
 
@@ -274,13 +278,14 @@ def test_streeteasy_regression(optimizer):
     # network config
     config = NeuralNetworkConfig(
         layer_dims=[X_train.shape[0], 128, 64, 1],
-        learning_rate=0.01 if optimizer == OptimizerType.SGD else 0.001,
         optimizer=optimizer,
         seed=42,
         mini_batch_size=200,
         beta1=0.9,
         beta2=0.999,
         epsilon=1e-8,
+        C=0.05,
+        warmup_steps=500,
         task=TaskType.REGRESSION,  # specify regression task for streeteasy
     )
     nn = SimpleNeuralNetwork(config)
