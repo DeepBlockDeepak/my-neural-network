@@ -14,6 +14,7 @@ class NeuralNetworkConfig(BaseModel):
     beta1: float = Field(0.9, ge=0.0, le=1.0)  # adam hyperparameter
     beta2: float = Field(0.999, ge=0.0, le=1.0)  # adam hyperparameter
     epsilon: float = Field(1e-8, gt=0.0)  # adam hyperparameter
+    keep_prob: float = Field(0.85, gt=0.0)  # dropout prob is 1-keep_prob
     optimizer: OptimizerType = OptimizerType.ADAM  # "ADAM" or "SGD",
     task: TaskType = TaskType.CLASSIFICATION  # "classification" or "regression"
     C: float = Field(0.01, ge=0.0)  # warmup factor
@@ -143,7 +144,7 @@ class SimpleNeuralNetwork:
 
         return np.squeeze(cost)  # reduce the dimensionality of the cost to a scalar
 
-    def forward_propagation(self, X: np.ndarray) -> tuple[np.ndarray, list]:
+    def forward_propagation(self, X: np.ndarray, mode: str = "train") -> tuple[np.ndarray, list]:
         """
         Performs the forward pass through the network for binary or multiclass classification.
         Computes the activation at each layer by applying the linear transformation followed by the activation function.
@@ -153,6 +154,7 @@ class SimpleNeuralNetwork:
 
         Args:
             X: Input data (features) where each column represents an example.
+            mode: specifies whether training is conducted, in order to implement dropout.
 
         Returns:
             tuple: A tuple containing:
@@ -177,7 +179,16 @@ class SimpleNeuralNetwork:
             b = self.parameters["b" + str(l)]
             Z = np.dot(W, A_prev) + b
             A = ActivationFunction.relu(Z)  # ReLU activation for all hidden layers
-            caches.append((A_prev, W, b, Z))
+            
+            if mode == 'train':
+                # apply dropout
+                D = np.random.rand(A.shape[0], A.shape[1]) < self.config.keep_prob
+                A = A * D
+                A = A / self.config.keep_prob  # inverted dropout scaling
+                caches.append((A_prev, W, b, Z, D))
+            else:
+                caches.append((A_prev, W, b, Z, None))  # no dropout mask during inference
+
 
         # final activation leading to output layer
         W = self.parameters["W" + str(self.L - 1)]
@@ -206,7 +217,7 @@ class SimpleNeuralNetwork:
             )
 
         # `A` here is the activation from the last hidden layer.
-        caches.append((A, W, b, Z))
+        caches.append((A, W, b, Z, None))  # no dropout in the output layer
 
         return AL, caches
 
@@ -265,7 +276,7 @@ class SimpleNeuralNetwork:
 
         # retrieve cache for the output layer, layer L-1
         current_cache = caches[-1]
-        A_prev, W, b, Z = current_cache
+        A_prev, W, b, Z, D = current_cache
 
         # initialize backpropagation for output layer
         # dZ = AL - Y  # for the output layer (layer L-1)
@@ -282,7 +293,11 @@ class SimpleNeuralNetwork:
         # backprop-loop over the hidden layers in reverse order (from L-2 to 1)
         for l in reversed(range(1, L - 1)):
             current_cache = caches[l - 1]  # cache for layer l
-            A_prev, W, b, Z = current_cache
+            A_prev, W, b, Z, D = current_cache
+
+            # apply dropout mask to the gradient
+            dA_prev = dA_prev * D
+            dA_prev = dA_prev / self.config.keep_prob
 
             # calc dZ for hidden layer
             dZ = dA_prev * ActivationFunction.relu_derivative(Z)
@@ -409,7 +424,7 @@ class SimpleNeuralNetwork:
                 )
                 epoch_cost = 0
                 for mini_batch_X, mini_batch_Y in mini_batches:
-                    AL, caches = self.forward_propagation(mini_batch_X)
+                    AL, caches = self.forward_propagation(mini_batch_X, mode="train")
                     cost = self.compute_loss(AL, mini_batch_Y)
 
                     # check for NaN or Inf in the cost, (exploding gradients)
@@ -429,7 +444,7 @@ class SimpleNeuralNetwork:
 
                 # validation phase (if validation data is provided)
                 if X_val is not None and Y_val is not None:
-                    AL_val, _ = self.forward_propagation(X_val)
+                    AL_val, _ = self.forward_propagation(X_val, mode="test")
                     val_loss = self.compute_loss(AL_val, Y_val)
 
                     # check for early stopping
@@ -456,7 +471,7 @@ class SimpleNeuralNetwork:
             Predicted labels or values for the input data.
         """
         # run forward propagation to get the output activations
-        AL, _ = self.forward_propagation(X)
+        AL, _ = self.forward_propagation(X, mode="test")
 
         if (task := self.config.task) == TaskType.CLASSIFICATION:
             # check for output layer/model classification-type
