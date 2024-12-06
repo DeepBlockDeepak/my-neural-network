@@ -9,7 +9,6 @@ from my_neural_network.error_handlers import validate_input_shapes
 
 class NeuralNetworkConfig(BaseModel):
     layer_dims: list[int]
-    learning_rate: float = Field(0.001, ge=0.0)
     seed: int = Field(42, ge=0)
     mini_batch_size: int = Field(32, ge=1)
     beta1: float = Field(0.9, ge=0.0, le=1.0)  # adam hyperparameter
@@ -17,17 +16,8 @@ class NeuralNetworkConfig(BaseModel):
     epsilon: float = Field(1e-8, gt=0.0)  # adam hyperparameter
     optimizer: OptimizerType = OptimizerType.ADAM  # "ADAM" or "SGD",
     task: TaskType = TaskType.CLASSIFICATION  # "classification" or "regression"
-
-    @field_validator("learning_rate", mode="before")
-    @classmethod
-    def adjust_learning_rate(cls, value: float, info) -> float:
-        # access the optimizer from other fields
-        optimizer = info.data.get(
-            "optimizer", OptimizerType.ADAM
-        )  # default to Adam if optimizer isn't set
-        if optimizer == OptimizerType.SGD:
-            return 0.01 if value is None else value  # default lr for SGD is 0.01
-        return value if value is not None else 0.001  # default for Adam is 0.001
+    C: float = Field(0.01, ge=0.0)  # warmup factor
+    warmup_steps: int = Field(100, ge=1)
 
     # ensure the layer_dims list has at least two layers (input and output)
     @field_validator("layer_dims", mode="before")
@@ -106,6 +96,15 @@ class SimpleNeuralNetwork:
             mini_batches.append((mini_batch_X, mini_batch_Y))
 
         return mini_batches
+
+    def _get_learning_rate(self, s):
+        C = self.config.C
+        s_w = self.config.warmup_steps  # warmup steps from config
+        if s <= s_w:
+            lr = C * min(1 / np.sqrt(s), s / s_w ** (1.5))
+        else:
+            lr = C / np.sqrt(s)
+        return lr
 
     def compute_loss(self, AL: np.ndarray, Y: np.ndarray) -> float:
         """
@@ -297,38 +296,38 @@ class SimpleNeuralNetwork:
 
         return grads
 
-    def update_parameters(self, grads: dict, t: int) -> None:
+    def update_parameters(self, grads: dict, t: int, lr: int) -> None:
         """
         Update the parameters using gradient descent or Adam.
 
         Args:
             grads: Dictionary with gradients.
             t: time step for Adam.
+            lr: warmed-up learning rate
         """
         optimizer = self.config.optimizer
 
         if optimizer == OptimizerType.SGD:
-            learning_rate = self.config.learning_rate
             for l in range(1, self.L):
-                self.parameters["W" + str(l)] -= learning_rate * grads["dW" + str(l)]
-                self.parameters["b" + str(l)] -= learning_rate * grads["db" + str(l)]
+                self.parameters["W" + str(l)] -= lr * grads["dW" + str(l)]
+                self.parameters["b" + str(l)] -= lr * grads["db" + str(l)]
         elif optimizer == OptimizerType.ADAM:
-            self._update_parameters_with_adam(grads, t)
+            self._update_parameters_with_adam(grads, t, lr)
         else:
             raise ValueError(f"Optimizer '{self.config.optimizer}' is not supported.")
 
-    def _update_parameters_with_adam(self, grads, t):
+    def _update_parameters_with_adam(self, grads: dict, t: int, lr: int):
         """
         Performs the Adam hyperparameter updates.
 
         Args:
             grads: weights and biases computed during backpropagation.
             t: time step (epoch number) for bias corrections.
+            lr: warmed-up learning rate
         """
         beta1 = self.config.beta1
         beta2 = self.config.beta2
         epsilon = self.config.epsilon
-        learning_rate = self.config.learning_rate
 
         for l in range(1, self.L):
             # moving average, m, of the gradients
@@ -356,10 +355,10 @@ class SimpleNeuralNetwork:
             v_corrected_db = self.v["db" + str(l)] / (1 - beta2**t)
 
             # update parameters
-            self.parameters["W" + str(l)] -= learning_rate * (
+            self.parameters["W" + str(l)] -= lr * (
                 m_corrected_dW / (np.sqrt(v_corrected_dW) + epsilon)
             )
-            self.parameters["b" + str(l)] -= learning_rate * (
+            self.parameters["b" + str(l)] -= lr * (
                 m_corrected_db / (np.sqrt(v_corrected_db) + epsilon)
             )
 
@@ -424,26 +423,19 @@ class SimpleNeuralNetwork:
                     epoch_cost += cost
                     grads = self.backward_propagation(AL, mini_batch_Y, caches)
 
-                    # update parameters according to optimizer method
-                    if optimizer == OptimizerType.ADAM:
-                        t += 1
+                    t += 1
+                    lr = self._get_learning_rate(t)
+                    self.update_parameters(grads, t, lr)
 
-                    self.update_parameters(grads, t)
-
-                # Validation phase (if validation data is provided)
+                # validation phase (if validation data is provided)
                 if X_val is not None and Y_val is not None:
                     AL_val, _ = self.forward_propagation(X_val)
                     val_loss = self.compute_loss(AL_val, Y_val)
 
-                    # print(
-                    #     f"Epoch {i + 1}: Train Loss = {epoch_cost / len(mini_batches):.4f}, "
-                    #     f"Validation Loss = {val_loss:.4f}"
-                    # )
-
-                    # Check for early stopping
+                    # check for early stopping
                     if val_loss < best_val_loss:
                         best_val_loss = val_loss
-                        patience_counter = 0  # Reset patience counter
+                        patience_counter = 0  # reset patience counter
                     else:
                         patience_counter += 1
                         if patience_counter >= patience:
