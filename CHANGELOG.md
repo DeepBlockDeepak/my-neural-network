@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.2.0] - 2024-12-06
+### Added
+- `pytorch_extension` package under `src/` directory for PyTorch-based dynamic model implementation.
+
 ## [1.1.0] - 2024-12-06
 ### Added
 - Initial implementation of Adam with tests against Kaggle Cancer dataset.
