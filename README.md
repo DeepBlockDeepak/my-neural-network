@@ -22,28 +22,8 @@ A simple, hand-rolled neural network project for testing and exploration.
   Gradually increases the learning rate at the start of training to stabilize early updates. Configure the warmup steps and scaling factors to improve convergence.
 
 - **Robust Configuration Management with Pydantic:**  
-  Employs Pydantic-based configuration (in the `NeuralNetworkConfig`) that validates fields, ensures parameter correctness, and simplifies hyperparameter management.### Features
-
-- **Flexible Architecture Configuration:**  
-  Easily define custom network layer dimensions via the `layer_dims` setting. The network supports both shallow and deeper architectures.
-
-- **Classification and Regression Tasks:**  
-  Train and evaluate the network on various tasks:
-  - **Classification:** Tested on datasets like the Breast Cancer and Titanic datasets, providing binary or multi-class classification capabilities.
-  - **Regression:** Successfully applied to tasks like predicting apartment rents from the StreetEasy dataset.
-
-- **Multiple Optimizers:**  
-  Switch between optimizers like **SGD** and **Adam** without changing your code logic, allowing you to experiment with different optimization strategies easily.
-
-- **Dropout Regularization:**  
-  Incorporate dropout layers to combat overfitting. Control the dropout probability and leverage inverted dropout scaling for consistent training behavior.
-
-- **Warmup Learning Rate Schedules:**  
-  Gradually increase the learning rate at the start of training to stabilize early updates. Configure the warmup steps and scaling factors to improve convergence.
-
-- **Robust Configuration Management with Pydantic:**  
-  Employ Pydantic-based configuration (e.g., `NeuralNetworkConfig`) that validates fields, ensures parameter correctness, and simplifies hyperparameter management.
-
+  Employs Pydantic-based configuration (in the `NeuralNetworkConfig`) that validates fields, ensures parameter correctness, and simplifies hyperparameter management.
+  
 
 ### Prerequisites
 
