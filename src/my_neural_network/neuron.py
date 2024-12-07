@@ -1,3 +1,5 @@
+from typing import Tuple
+
 import numpy as np
 from pydantic import BaseModel, Field, field_validator
 from tqdm import tqdm
@@ -380,6 +382,43 @@ class SimpleNeuralNetwork:
                 m_corrected_db / (np.sqrt(v_corrected_db) + epsilon)
             )
 
+    def _run_epoch(self, X: np.ndarray, Y: np.ndarray, t: int) -> Tuple[float, int]:
+        """
+        Run a single epoch of training.
+
+        Args:
+            X: Input training data.
+            Y: Training labels.
+            t: The current time step for optimization (used in Adam and Warmup).
+
+        Returns:
+            A tuple of:
+            - avg_epoch_cost: The average cost over all mini-batches in this epoch.
+            - t: The updated time step after processing this epoch.
+        """
+        mini_batches = self._create_mini_batches(
+            X, Y, mini_batch_size=self.config.mini_batch_size, seed=42
+        )
+        total_epoch_cost = 0.0
+
+        for mini_batch_X, mini_batch_Y in mini_batches:
+            AL, caches = self.forward_propagation(mini_batch_X, mode="train")
+            mini_batch_cost = self.compute_loss(AL, mini_batch_Y)
+
+            # check for NaN or Inf in the cost, (exploding gradients)
+            if np.isnan(mini_batch_cost) or np.isinf(mini_batch_cost):
+                raise ValueError("NaN or Inf detected in cost during training.")
+
+            total_epoch_cost += mini_batch_cost
+            grads = self.backward_propagation(AL, mini_batch_Y, caches)
+
+            t += 1
+            lr = self._get_learning_rate(t)
+            self.update_parameters(grads, t, lr)
+
+        avg_epoch_cost = total_epoch_cost / len(mini_batches)
+        return avg_epoch_cost, t
+
     @validate_input_shapes
     def train(
         self,
@@ -421,29 +460,9 @@ class SimpleNeuralNetwork:
         best_val_loss = float("inf")
         patience_counter = 0
         with tqdm(total=epochs, desc="Training Progress") as pbar:
-            for i in range(epochs):
-                mini_batches = self._create_mini_batches(
-                    X, Y, mini_batch_size=self.config.mini_batch_size, seed=42
-                )
-                epoch_cost = 0
-                for mini_batch_X, mini_batch_Y in mini_batches:
-                    AL, caches = self.forward_propagation(mini_batch_X, mode="train")
-                    cost = self.compute_loss(AL, mini_batch_Y)
-
-                    # check for NaN or Inf in the cost, (exploding gradients)
-                    if np.isnan(cost) or np.isinf(cost):
-                        print(
-                            f"NaN or Inf detected in cost at epoch {i + 1}. Stopping training."
-                        )
-                        pbar.close()
-                        return
-
-                    epoch_cost += cost
-                    grads = self.backward_propagation(AL, mini_batch_Y, caches)
-
-                    t += 1
-                    lr = self._get_learning_rate(t)
-                    self.update_parameters(grads, t, lr)
+            for epoch in range(epochs):
+                # run the epoch with mini-batching
+                avg_train_loss, t = self._run_epoch(X, Y, t)
 
                 # validation phase (if validation data is provided)
                 if X_val is not None and Y_val is not None:
@@ -457,7 +476,7 @@ class SimpleNeuralNetwork:
                     else:
                         patience_counter += 1
                         if patience_counter >= patience:
-                            print(f"Early stopping triggered at epoch {i + 1}")
+                            print(f"Early stopping triggered at epoch {epoch + 1}")
                             break
 
                 pbar.update(1)

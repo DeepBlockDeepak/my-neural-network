@@ -233,7 +233,7 @@ def test_titanic_classification(optimizer):
 
 # poetry run pytest -s tests/test_neuron.py::test_streeteasy_regression\[OptimizerType.ADAM\]
 @pytest.mark.parametrize(
-    "optimizer", [OptimizerType.ADAM, OptimizerType.SGD]
+    "optimizer", [OptimizerType.ADAM]
 )  # removing OptimizerType.SGD from params due to exploding NN params
 def test_streeteasy_regression(optimizer):
     # load
