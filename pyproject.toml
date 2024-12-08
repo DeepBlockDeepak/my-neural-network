@@ -9,7 +9,7 @@ readme = "README.md"
 packages = [
     { include = "activation_functions", from = "src" },
     { include = "my_neural_network", from = "src" },
-    { include = "pytorch_extension", from = "src" }
+    { include = "pytorch_core", from = "src" }
 ]
 
 # Python version and any project dependencies here
