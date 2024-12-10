@@ -232,3 +232,64 @@ def test_titanic_classification_torch():
 
     accuracy = accuracy_score(y_val_torch, pred_classes)
     print(f"DynaTorchModel Accuracy: {accuracy:.4f}")
+
+
+
+# DynaTorch Example that doesn't suck
+from torch.optim import Adam
+
+def test_streeteasy_regression_dynatorch():
+    apartments_df = pd.read_csv("tests/street_easy_data/streeteasy.csv")
+
+    numerical_features = [
+        "bedrooms", "bathrooms", "size_sqft", "min_to_subway",
+        "floor", "building_age_yrs", "no_fee", "has_roofdeck", 
+        "has_washer_dryer", "has_doorman", "has_elevator", 
+        "has_dishwasher", "has_patio", "has_gym"
+    ]
+    X = apartments_df[numerical_features].to_numpy()
+    y = apartments_df["rent"].to_numpy()
+
+    X = torch.tensor(X, dtype=torch.float32)
+    y = torch.tensor(y, dtype=torch.float32).view(-1, 1)
+
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+    layer_dims = [X_train.shape[1], 128, 64, 1]
+    model = DynaTorchModel(layer_dims, task_type="regression")
+
+    loss_fn = model.loss_fn  # MSELoss defined in DynaTorchModel
+    optimizer = Adam(model.parameters(), lr=0.001)
+
+    num_epochs = 20000
+    for epoch in range(num_epochs):
+        model.train()        
+        optimizer.zero_grad()
+        predictions = model(X_train)
+        loss = loss_fn(predictions, y_train)
+        loss.backward()
+        optimizer.step()
+
+        # Logging progress
+        if (epoch + 1) % 1000 == 0:
+            print(f"Epoch [{epoch + 1}/{num_epochs}], Loss: {loss.item():.4f}")
+
+    model.eval()
+    with torch.no_grad():
+        test_predictions = model(X_test)
+        test_loss = loss_fn(test_predictions, y_test)
+        rmse = torch.sqrt(test_loss)
+
+    print(f"Test RMSE: {rmse.item():.4f}")
+
+    plt.figure(figsize=(10, 6))
+    plt.scatter(y_test.numpy(), test_predictions.numpy(), alpha=0.5, color="blue", label="Predictions")
+
+    min_val, max_val = y_test.min().item(), y_test.max().item()
+    plt.plot([min_val, max_val], [min_val, max_val], linestyle="--", color="pink", label="y = x")
+
+    plt.xlabel("Actual Rent")
+    plt.ylabel("Predicted Rent")
+    plt.title(f"Predicted vs Actual Rent (RMSE: {rmse.item():.2f})")
+    plt.legend()
+    plt.show()
