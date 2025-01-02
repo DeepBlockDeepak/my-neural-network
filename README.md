@@ -1,4 +1,4 @@
-# Simple Neural Network Project
+# Flexible and Extensible Neural Network
 
 A simple, hand-rolled neural network project for testing and exploration.
 
