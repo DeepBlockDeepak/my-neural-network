@@ -1,1 +1,1 @@
-from .conv2d import Conv2D
+from .conv2d_pre_einsum import Conv2D
