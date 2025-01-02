@@ -81,21 +81,20 @@ def test_backward_propagation(create_network):
     and that it is providing all necessary information for parameter updates.
     """
     network = create_network
-    X = np.random.randn(
-        network.layer_dims[0], 10
-    )  # Generates a random input matrix X with a shape of the network’s input layer dimension. 10 samples/batch size
+    # a random input matrix with a shape of the network’s input layer dimension. 10 samples/batch size
+    X = np.random.randn(network.layer_dims[0], 10)
     num_classes = network.layer_dims[-1]
 
-    # Prepare labels Y based on number of output classes
+    # labels based on number of output classes
+    # single row of Binary labels with vals of [0,1]
     if num_classes == 1:
-        Y = np.random.randint(
-            0, 2, (1, 10)
-        )  # single row of Binary labels with vals of [0,1]
-    else:  # num_classes is the number of different classes the network can classify.
-        # Generate random labels for multi-class, and convert to one-hot
-        labels = np.random.randint(0, num_classes, (10,))  # Generate random labels
+        Y = np.random.randint(0, 2, (1, 10))
+    # num_classes is the number of different classes the network can classify.
+    else:
+        # generate random labels for multi-class, and convert to one-hot
+        labels = np.random.randint(0, num_classes, (10,))
         Y = np.zeros((num_classes, 10))
-        Y[labels, np.arange(10)] = 1  # Proper one-hot encoding
+        Y[labels, np.arange(10)] = 1  # one-hot encoding
         # Together, `labels` and `np.arange(10)` form a set of index pairs
         # that specify which elements of the array Y to set to 1.
         # For each column  j (ranging from 0 to 9), the element at row labels[j]

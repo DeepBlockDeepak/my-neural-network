@@ -23,7 +23,42 @@ A simple, hand-rolled neural network project for testing and exploration.
 
 - **Robust Configuration Management with Pydantic:**  
   Employs Pydantic-based configuration (in the `NeuralNetworkConfig`) that validates fields, ensures parameter correctness, and simplifies hyperparameter management.
-  
+
+
+## Example
+```python
+from sklearn.datasets import load_breast_cancer
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+from my_neural_network import NeuralNetworkConfig, SimpleNeuralNetwork
+
+# load
+data = load_breast_cancer()
+X = data.data  # shape: (m, n_features) -> (569, 30)
+Y = data.target  # shape: (m,) -> (569,)
+
+X_train, X_test, Y_train, Y_test = train_test_split(
+    X, Y, test_size=0.2, random_state=42
+)
+
+# transpose X to match nn's expected input shape
+X_train = X_train.T  # shape: (n_features, m_train)
+X_test = X_test.T  # shape: (n_features, m_test)
+Y_train = Y_train.reshape(1, -1)  # shape: (1, m_train)
+Y_test = Y_test.reshape(1, -1)  # shape: (1, m_test)
+
+# configure the network
+config = NeuralNetworkConfig(
+    layer_dims=[X_train.shape[0], 64, 32, 1],
+)
+nn = SimpleNeuralNetwork(config)
+
+# train, predict, evaluate
+nn.train(X_train, Y_train, epochs=1000, X_val=X_test, Y_val=Y_test)
+predictions = nn.predict(X_test)
+accuracy = accuracy_score(Y_test.flatten(), predictions.flatten())
+print(f"Model Accuracy: {accuracy:.4f}")
+```
 
 ### Prerequisites
 
